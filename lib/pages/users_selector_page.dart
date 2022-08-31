@@ -1,5 +1,6 @@
 import 'package:debt_tracking_app/DatabaseHelper.dart';
 import 'package:debt_tracking_app/pages/user_create_page.dart';
+import 'package:debt_tracking_app/widgets/UserAvatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
@@ -71,15 +72,12 @@ class _UsersSelectorPageState extends State<UsersSelectorPage> {
       bool isSelected = _selections[user.id] ?? false;
       return Card(
         elevation: 2,
-        color: isSelected ? Colors.amberAccent : Colors.white,
+        color: isSelected ? Theme.of(context).colorScheme.surfaceTint : null,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const CircleAvatar(
-                backgroundColor: Colors.amber,
-                child: Text('XD')
-              ),
+              leading: UserAvatar(user: user),
               title: Text(
                 user.name,
                 style: const TextStyle(fontWeight: FontWeight.bold),
@@ -103,7 +101,7 @@ class _UsersSelectorPageState extends State<UsersSelectorPage> {
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
+          children: [
             _loading ? const CircularProgressIndicator() : (_users.isEmpty ? const Text('There are no users') : Expanded(child: buildUserList())),
           ],
         ),

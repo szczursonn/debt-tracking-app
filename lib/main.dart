@@ -1,9 +1,22 @@
 import 'package:debt_tracking_app/pages/debts_page.dart';
+import 'package:debt_tracking_app/pages/settings_page.dart';
 import 'package:debt_tracking_app/pages/users_page.dart';
 import 'package:flutter/material.dart';
 
 void main() {
   runApp(const MyApp());
+}
+
+class SettingsButton extends StatelessWidget {
+  const SettingsButton({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) => IconButton(
+    onPressed: () {
+      Navigator.push(context, MaterialPageRoute(builder: (builder) => const SettingsPage()));
+    }, 
+    icon: const Icon(Icons.settings)
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -12,14 +25,21 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'debt tracking app',
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
+      darkTheme: ThemeData(
+        brightness: Brightness.dark
+      ),
+      themeMode: ThemeMode.system,
       home: DefaultTabController(
         length: 3,
         child: Scaffold(
           appBar: AppBar(
+            actions: const [
+              SettingsButton()
+            ],
             bottom: const TabBar(
               tabs: [
                 Tab(icon: Icon(Icons.person)),
@@ -37,7 +57,7 @@ class MyApp extends StatelessWidget {
             ],
           )
         )
-      )
+      ),//
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:debt_tracking_app/DatabaseHelper.dart';
 import 'package:debt_tracking_app/pages/users_selector_page.dart';
+import 'package:debt_tracking_app/widgets/UserAvatar.dart';
 import 'package:flutter/material.dart';
 
 import '../models.dart';
@@ -19,6 +20,8 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
 
   List<User> _users = [];
   Map<int,TextEditingController> _usersTextControllers = {};
+  final TextEditingController _amountTextController = TextEditingController(text: '0');
+  final TextEditingController _dateTextController = TextEditingController(text: '');
 
   bool _isSaving = false;
   bool _isAutoDistribute = true;
@@ -27,12 +30,10 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
   DateTime _date = DateTime.now();
   double _autoDistributeError = 0;
 
-  final TextEditingController _amountTextController = TextEditingController(text: '0');
-  final TextEditingController _dateTextController = TextEditingController(text: '');
-
   void onSubmitClick() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isSaving = true);
+
       var debt = await DatabaseHelper.instance.createDebt(
         title: _title,
         description: _description,
@@ -40,6 +41,7 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
         userAmounts: _usersTextControllers.map((key, value) => MapEntry(key, double.parse(value.text)))
       );
       if (!mounted) return;
+
       setState(() => _isSaving = false);
       Navigator.pop(context, debt);
     }
@@ -48,16 +50,16 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
   void tryAutoDistribute() {
     if (!_isAutoDistribute || _users.isEmpty) return;
 
-    var total = double.tryParse(_amountTextController.text);
+    var total = double.tryParse(_amountTextController.text.replaceAll(',', '.'));
     if (total == null) return;
 
     var chunk = (total/_users.length).ceil();
     var chunkStr = chunk.toStringAsFixed(2);
-    for (var controller in _usersTextControllers.values) {
-      controller.text = chunkStr;
-    }
     
     setState(() {
+      for (var controller in _usersTextControllers.values) {
+        controller.text = chunkStr;
+      }
       _autoDistributeError = total-(double.parse(chunkStr)*_users.length);
     });
   }
@@ -65,12 +67,24 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
   double getRealTotal() {
     double total = 0;
     for (var c in _usersTextControllers.values) {
-      double? x = double.tryParse(c.text);
+      double? x = double.tryParse(c.text.replaceAll(',', '.'));
       if (x != null) {
         total+=x;
       }
     }
     return total;
+  }
+
+  void setupUserTextControllers() {
+    disposeUserTextControllers();
+
+    for (var user in _users) {
+      var controller = TextEditingController();
+      _usersTextControllers[user.id] = controller;
+      controller.addListener(onUserTextControllerChange(controller));
+    }
+
+    tryAutoDistribute();
   }
 
   void onSelectUsersClick() async {
@@ -79,38 +93,30 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
     if (selectedUsers != null) {
       setState(() {
         _users = selectedUsers;
-
-        for (var userTextController in _usersTextControllers.values) {
-          userTextController.dispose();
-        }
-        
-        _usersTextControllers = {};
-        for (var user in _users) {
-          var controller = TextEditingController();
-          _usersTextControllers[user.id] = controller;
-          controller.addListener(() {
-            if (!mounted) return;
-            var value = double.tryParse(controller.text);
-            if (value == null) return;
-            if (!_isAutoDistribute) {
-              var total = getRealTotal();
-              setState(() {
-                _amountTextController.text = total.toStringAsFixed(2);
-              });
-            }
-          });
-        }
-        tryAutoDistribute();
+        setupUserTextControllers();
       });
     }
   }
 
+  // Function<Function<void>>
+  VoidCallback onUserTextControllerChange(TextEditingController controller) => () {
+    if (!mounted) return;
+    var value = double.tryParse(controller.text.replaceAll(',', '.'));
+    if (value == null) return;
+    if (!_isAutoDistribute) {
+      setState(() {
+        _amountTextController.text = getRealTotal().toStringAsFixed(2);
+      });
+    }
+  };
+
   void onSwitchClick(bool value) async {
     setState(() {
       _isAutoDistribute=value;
-      // auto-assign values to users
-      if (_isAutoDistribute) {
+      if (_isAutoDistribute) { // set to true: autodistribute
         tryAutoDistribute();
+      } else { // set to false: correct the total
+        _amountTextController.text = getRealTotal().toStringAsFixed(2);
       }
     });
   }
@@ -128,14 +134,21 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
   @override
   void initState() {
     super.initState();
-    if (widget.initialUser != null) _users.add(widget.initialUser!);
+    
     _amountTextController.addListener(() {
-      var num = double.tryParse(_amountTextController.text);
+      var num = double.tryParse(_amountTextController.text.replaceAll(',', '.'));
       if (num != null) {
         tryAutoDistribute();
       }
     });
     _dateTextController.text = '${_date.year}/${_date.month}/${_date.day}';
+
+    if (widget.initialUser != null) {
+      setState(() {
+        _users.add(widget.initialUser!);
+        setupUserTextControllers();
+      });
+    }
   }
   
   @override
@@ -143,16 +156,72 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
     super.dispose();
     _amountTextController.dispose();
     _dateTextController.dispose();
-    for (var controller in _usersTextControllers.values) {
-      controller.dispose();
+    disposeUserTextControllers();
+  }
+
+  void disposeUserTextControllers() {
+    for (var userTextController in _usersTextControllers.values) {
+      userTextController.dispose();
     }
+    _usersTextControllers = {};
   }
 
   Future<bool> onPop() async {
     if (!_isSaving) Navigator.pop(context, null);
-
     return false;
   }
+
+  Widget buildUserCard(User user) => Card(
+    elevation: 2,
+    child: SizedBox(
+      height: 80,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          ListTile(
+            leading: UserAvatar(user: user),
+            title: Text(
+              user.name,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            trailing: SizedBox(
+              width: 100,
+              height: 60,
+              child: TextFormField(
+                controller: _usersTextControllers[user.id],
+                decoration: const InputDecoration(
+                  labelText: 'Amount',
+                  labelStyle: TextStyle(
+                    fontSize: 14,
+                  ),
+                  errorStyle: TextStyle(
+                    fontSize: 10,
+                  ),
+                  errorMaxLines: 2,
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                readOnly: _isAutoDistribute || _isSaving,
+                validator: (value) {
+                  var number = double.tryParse(value!.replaceAll(',', '.'));
+                  if (number == null) {
+                    return 'Invalid number';
+                  }
+                  if (number <= 0) {
+                    return 'Must be greater than 0';
+                  }
+                  return null;
+                },
+              ),
+            ),
+          )
+        ],
+      ),
+    )
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -172,10 +241,12 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
             key: _formKey,
             child: ListView(
               children: [
+                // TITLE
                 TextFormField(
                   readOnly: _isSaving,
                   decoration: const InputDecoration(
                     labelText: 'Title',
+                    hintText: 'Debt title',
                     border: UnderlineInputBorder()
                   ),
                   onChanged: (String? value) {
@@ -188,10 +259,12 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
                     return null;
                   },
                 ),
+                // DESCRIPTION
                 TextFormField(
                   readOnly: _isSaving,
                   decoration: const InputDecoration(
                     labelText: 'Description',
+                    hintText: 'Additional info e.g. place or circumstances',
                     border: UnderlineInputBorder()
                   ),
                   maxLines: null,
@@ -199,6 +272,7 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
                     setState(() => _description = value);
                   },
                 ),
+                // DATE
                 TextFormField(
                   controller: _dateTextController,
                   decoration: const InputDecoration(
@@ -208,6 +282,7 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
                   readOnly: true,
                   onTap: onPickDateClick,
                 ),
+                // TOTAL AMOUNT
                 TextFormField(
                   readOnly: !_isAutoDistribute || _isSaving,
                   controller: _amountTextController,
@@ -227,6 +302,7 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
                     return null;
                   },
                 ),
+                // AUTO-DISTRIBUTE SWITCH
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -237,64 +313,17 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
                     const Text('Auto-distribute', style: TextStyle(fontWeight: FontWeight.bold)),
                   ],
                 ),
+                // ROUNDING ERROR MSG
                 (_isAutoDistribute && _autoDistributeError.abs() >= 0.01 && _users.isNotEmpty) ? Center(
                   child: Text('Rounding Error: ${_autoDistributeError<0 ? 'Overcharging' : 'Losing'} ${(_autoDistributeError/_users.length).abs().toStringAsFixed(2)}PLN/person (real total: ${getRealTotal().toStringAsFixed(2)} PLN)')
                 ) : Container(),
+                // CHOOSE USERS BTN
                 TextButton(onPressed: _isSaving ? null : onSelectUsersClick, child: const Text('Choose users')),
+                // USERS LIST
                 Column(
-                  children: _users.map((user)=>Card(
-                    elevation: 2,
-                    child: SizedBox(
-                      height: 80,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          ListTile(
-                            leading: const CircleAvatar(
-                              backgroundColor: Colors.amber,
-                              child: Text('JD')
-                            ),
-                            title: Text(
-                              user.name,
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            trailing: SizedBox(
-                              width: 100,
-                              height: 60,
-                              child: TextFormField(
-                                controller: _usersTextControllers[user.id],
-                                decoration: const InputDecoration(
-                                  labelText: 'Amount',
-                                  labelStyle: TextStyle(
-                                    fontSize: 14,
-                                  ),
-                                  errorStyle: TextStyle(
-                                    fontSize: 10,
-                                  ),
-                                  errorMaxLines: 2,
-                                  border: OutlineInputBorder(),
-                                ),
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                readOnly: _isAutoDistribute || _isSaving,
-                                validator: (value) {
-                                  var number = double.tryParse(value!);
-                                  if (number == null) {
-                                    return 'Invalid number';
-                                  }
-                                  if (number <= 0) {
-                                    return 'Must be greater than 0';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-                          )
-                        ],
-                      ),
-                    )
-                  )).toList(),
+                  children: _users.map(buildUserCard).toList(),
                 ),
+                // SUBMIT BTN
                 AspectRatio(
                   aspectRatio: 4.5,
                   child: Padding(

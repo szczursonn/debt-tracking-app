@@ -1,10 +1,12 @@
 import 'package:debt_tracking_app/DatabaseHelper.dart';
+import 'package:debt_tracking_app/helper_models.dart';
 import 'package:debt_tracking_app/pages/user_create_page.dart';
 import 'package:debt_tracking_app/pages/user_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 import '../models.dart';
+import '../widgets/UserAvatar.dart';
 
 class UsersPage extends StatefulWidget {
   const UsersPage({Key? key}) : super(key: key);
@@ -33,17 +35,28 @@ class _UsersPageState extends State<UsersPage> {
     if (mounted) setState(() => loading = false);
   }
 
-  void onFabClick() async {
-    Navigator.push(context, MaterialPageRoute(builder: (context) => const UserCreatePage()))
-      .then((value) {
-        if (!mounted) return;
-        if (value is User) {
-          setState(() {
-            users.add(value);
-          });
-        }
+  Future<void> onFabClick() async {
+    var res = await Navigator.push(context, MaterialPageRoute(builder: (context) => const UserCreatePage()));
+    if (!mounted) return;
+
+    if (res is User) {
+      setState(() {
+        users.add(res);
       });
+    }
   }
+
+  VoidCallback onUserClick(User user) => () async {
+    var res = await Navigator.push(context, MaterialPageRoute(builder: (context) => UserPage(user: user)));
+    if (res is User) {
+      var i = users.indexWhere((element) => element.id==res.id);
+      if (i != -1) {
+        setState(() {
+          users[i] = res;
+        });
+      }
+    }
+  };
 
   Widget buildUserList() => NotificationListener<UserScrollNotification>(
     onNotification: (notification) {
@@ -62,24 +75,23 @@ class _UsersPageState extends State<UsersPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const CircleAvatar(
-                backgroundColor: Colors.amber,
-                child: Text('XD')
-              ),
+              leading: UserAvatar(user: user),
               title: Text(
                 user.name,
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
-              trailing: FutureBuilder<int>(future: DatabaseHelper.instance.fetchUserBalance(user.id), builder: (context, snapshot) {
-                if (snapshot.hasData) {
-                  int data = snapshot.data!;
-                  return Text('Balance: ${(data/100).toStringAsFixed(2)} PLN');
+              trailing: FutureBuilder<UserBalance>(
+                future: DatabaseHelper.instance.fetchUserBalance(user.id), 
+                builder: (context, snapshot) {
+                  if (snapshot.hasData) {
+                    UserBalance data = snapshot.data!;
+                    int bal = data.paid-data.owed;
+                    return Text('${(bal/100).toStringAsFixed(0)} zł', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: (bal >= 0) ? Colors.green : Colors.redAccent));
+                  }
+                  return const Text('loading...');
                 }
-                return const Text('loading...');
-              }),
-              onTap: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => UserPage(user: user)));
-              },
+              ),
+              onTap: onUserClick(user),
             )
           ],
         )
@@ -93,7 +105,7 @@ class _UsersPageState extends State<UsersPage> {
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
+          children: [
             loading ? const CircularProgressIndicator() : (users.isEmpty ? const Text('There are no users') : Expanded(child: buildUserList())),
           ],
         ),

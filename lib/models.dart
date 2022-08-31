@@ -1,21 +1,26 @@
+import 'dart:typed_data';
+
 class User {
   final int id;
   String name;
+  Uint8List? avatar;
 
-  User({required this.id, required this.name});
+  User({required this.id, required this.name, this.avatar});
 
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'name': name
+      'name': name,
+      'avatar': avatar
     };
   }
 
   static User fromMap(Map map) {
     return User(
       id: map['id'], 
-      name: map['name']
-      );
+      name: map['name'],
+      avatar: map['avatar']
+    );
   }
 }
 

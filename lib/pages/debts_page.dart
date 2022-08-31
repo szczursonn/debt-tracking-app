@@ -1,4 +1,5 @@
 import 'package:debt_tracking_app/DatabaseHelper.dart';
+import 'package:debt_tracking_app/pages/debt_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
@@ -81,7 +82,7 @@ class _DebtsPageState extends State<DebtsPage> {
                   },
                 ),
                 onTap: () {
-                  // navigate to debt page
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => DebtPage(debt: debt)));
                 },
             )
           ],
