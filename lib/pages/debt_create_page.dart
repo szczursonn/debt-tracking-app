@@ -1,9 +1,12 @@
-import 'package:debt_tracking_app/DatabaseHelper.dart';
+import 'package:debt_tracking_app/database_helper.dart';
 import 'package:debt_tracking_app/pages/users_selector_page.dart';
-import 'package:debt_tracking_app/widgets/UserAvatar.dart';
+import 'package:debt_tracking_app/utils.dart';
+import 'package:debt_tracking_app/widgets/user_avatar.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../models.dart';
+import '../providers/settings_provider.dart';
 
 class DebtCreatePage extends StatefulWidget {
   const DebtCreatePage({Key? key, this.initialUser}) : super(key: key);
@@ -53,14 +56,18 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
     var total = double.tryParse(_amountTextController.text.replaceAll(',', '.'));
     if (total == null) return;
 
-    var chunk = (total/_users.length).ceil();
-    var chunkStr = chunk.toStringAsFixed(2);
-    
+    late String chunk;
+
+    if (_users.length > 1) {
+      chunk = (total/_users.length).ceil().toStringAsFixed(2);
+    } else {
+      chunk = total.toStringAsFixed(2);
+    }
     setState(() {
       for (var controller in _usersTextControllers.values) {
-        controller.text = chunkStr;
+        controller.text = chunk;
       }
-      _autoDistributeError = total-(double.parse(chunkStr)*_users.length);
+      _autoDistributeError = total-(double.parse(chunk)*_users.length);
     });
   }
 
@@ -126,7 +133,7 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
     if (mounted && date != null) {
       setState(() {
         _date = date;
-        _dateTextController.text = '${_date.year}/${_date.month}/${_date.day}';
+        _dateTextController.text = Utils.formatDate(date);
       });
     }
   }
@@ -141,7 +148,7 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
         tryAutoDistribute();
       }
     });
-    _dateTextController.text = '${_date.year}/${_date.month}/${_date.day}';
+    _dateTextController.text = Utils.formatDate(_date);
 
     if (widget.initialUser != null) {
       setState(() {
@@ -314,8 +321,10 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
                   ],
                 ),
                 // ROUNDING ERROR MSG
-                (_isAutoDistribute && _autoDistributeError.abs() >= 0.01 && _users.isNotEmpty) ? Center(
-                  child: Text('Rounding Error: ${_autoDistributeError<0 ? 'Overcharging' : 'Losing'} ${(_autoDistributeError/_users.length).abs().toStringAsFixed(2)}PLN/person (real total: ${getRealTotal().toStringAsFixed(2)} PLN)')
+                (_isAutoDistribute && _autoDistributeError.abs() >= 0.00001 && _users.isNotEmpty) ? Center(
+                  child: Consumer<SettingsProvider>(
+                    builder: (context, value, _) => Text('Rounding Error: ${_autoDistributeError<0 ? 'Overcharging' : 'Losing'} ${(_autoDistributeError/_users.length).abs().toStringAsFixed(3)}${value.currency}/person (real total: ${getRealTotal().toStringAsFixed(2)} ${value.currency})')
+                  )
                 ) : Container(),
                 // CHOOSE USERS BTN
                 TextButton(onPressed: _isSaving ? null : onSelectUsersClick, child: const Text('Choose users')),

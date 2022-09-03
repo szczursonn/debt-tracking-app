@@ -1,12 +1,14 @@
-import 'package:debt_tracking_app/DatabaseHelper.dart';
+import 'package:debt_tracking_app/database_helper.dart';
 import 'package:debt_tracking_app/helper_models.dart';
 import 'package:debt_tracking_app/pages/user_create_page.dart';
 import 'package:debt_tracking_app/pages/user_page.dart';
+import 'package:debt_tracking_app/providers/settings_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:provider/provider.dart';
 
 import '../models.dart';
-import '../widgets/UserAvatar.dart';
+import '../widgets/user_avatar.dart';
 
 class UsersPage extends StatefulWidget {
   const UsersPage({Key? key}) : super(key: key);
@@ -86,7 +88,9 @@ class _UsersPageState extends State<UsersPage> {
                   if (snapshot.hasData) {
                     UserBalance data = snapshot.data!;
                     int bal = data.paid-data.owed;
-                    return Text('${(bal/100).toStringAsFixed(0)} zł', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: (bal >= 0) ? Colors.green : Colors.redAccent));
+                    return Consumer<SettingsProvider>(
+                      builder: (context, value, _) => Text('${(bal/100).toStringAsFixed(2)} ${value.currency}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: (bal >= 0) ? Colors.green : Colors.redAccent)),
+                    );
                   }
                   return const Text('loading...');
                 }
@@ -102,12 +106,15 @@ class _UsersPageState extends State<UsersPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            loading ? const CircularProgressIndicator() : (users.isEmpty ? const Text('There are no users') : Expanded(child: buildUserList())),
-          ],
+      body: Container(
+        margin: const EdgeInsets.all(12),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              loading ? const CircularProgressIndicator() : (users.isEmpty ? const Text('There are no users') : Expanded(child: buildUserList())),
+            ],
+          ),
         ),
       ),
       floatingActionButton: (isFabVisible && !loading) ? FloatingActionButton(

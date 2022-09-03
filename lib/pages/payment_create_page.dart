@@ -1,12 +1,14 @@
-import 'package:debt_tracking_app/DatabaseHelper.dart';
+import 'package:debt_tracking_app/database_helper.dart';
+import 'package:debt_tracking_app/utils.dart';
 import 'package:flutter/material.dart';
 
 import '../models.dart';
 
 class PaymentCreatePage extends StatefulWidget {
-  const PaymentCreatePage({Key? key, required this.user}) : super(key: key);
+  const PaymentCreatePage({Key? key, required this.userId, this.editedPayment}) : super(key: key);
 
-  final User user;
+  final int userId;
+  final Payment? editedPayment;
 
   @override
   State<PaymentCreatePage> createState() => _PaymentCreatePageState();
@@ -26,12 +28,25 @@ class _PaymentCreatePageState extends State<PaymentCreatePage> {
     if (_formKey.currentState!.validate()) {
       setState(() => _saving = true);
 
-      var payment = await DatabaseHelper.instance.createPayment(
-        userId: widget.user.id, 
-        amount: double.parse(_amountTextController.text),
-        date: _date, 
-        description: (_description.isEmpty) ? null : _description
-      );
+      late Payment payment;
+
+      if (widget.editedPayment == null) {
+        payment = await DatabaseHelper.instance.createPayment(
+          userId: widget.userId, 
+          amount: double.parse(_amountTextController.text).round()*100,
+          date: _date, 
+          description: (_description.isEmpty) ? null : _description
+        );
+      } else {
+        Payment p = Payment(
+          id: widget.editedPayment!.id,
+          userId: widget.userId,
+          amount: double.parse(_amountTextController.text).round()*100,
+          date: _date, 
+          description: (_description.isEmpty) ? null : _description
+        );
+        payment = await DatabaseHelper.instance.updatePayment(p);
+      }
 
       if (!mounted) return;
       setState(() => _saving = false);
@@ -44,7 +59,7 @@ class _PaymentCreatePageState extends State<PaymentCreatePage> {
     if (mounted && date != null) {
       setState(() {
         _date = date;
-        _dateTextController.text = '${_date.year}/${_date.month}/${_date.day}';
+        _dateTextController.text = Utils.formatDate(_date);
       });
     }
   }
@@ -52,7 +67,14 @@ class _PaymentCreatePageState extends State<PaymentCreatePage> {
   @override
   void initState() {
     super.initState();
-    _dateTextController.text = '${_date.year}/${_date.month}/${_date.day}';
+    if (widget.editedPayment != null) {
+      _date = widget.editedPayment!.date;
+      _amountTextController.text = (widget.editedPayment!.amount/100).toStringAsFixed(2);
+      if (widget.editedPayment!.description != null) {
+        _description = widget.editedPayment!.description!;
+      }
+    }
+    _dateTextController.text = Utils.formatDate(_date);
   }
 
   @override
@@ -72,7 +94,7 @@ class _PaymentCreatePageState extends State<PaymentCreatePage> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Register payment'),
+          title: Text(widget.editedPayment == null ? 'Register payment' : 'Edit payment'),
         ),
         body: Container(
           margin: const EdgeInsets.all(24),
@@ -105,6 +127,7 @@ class _PaymentCreatePageState extends State<PaymentCreatePage> {
                     border: UnderlineInputBorder()
                   ),
                   readOnly: _saving,
+                  initialValue: widget.editedPayment?.description,
                   onChanged: (String? value) {
                     if (value != null) setState(() => _description = value);
                   },
@@ -125,7 +148,7 @@ class _PaymentCreatePageState extends State<PaymentCreatePage> {
                     padding: const EdgeInsets.symmetric(vertical: 16.0),
                     child: ElevatedButton(
                       onPressed: _saving ? null : onSubmitClick,
-                      child: const Text('Create'),
+                      child: Text(widget.editedPayment == null ? 'Create' : 'Edit'),
                     ),
                   ),
                 ),

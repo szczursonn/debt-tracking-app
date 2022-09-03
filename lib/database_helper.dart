@@ -83,6 +83,12 @@ class DatabaseHelper {
     return user;
   }
 
+  Future<Payment> updatePayment(Payment payment) async {
+    Database db = await instance.database;
+    await db.insert(_paymentsTable, payment.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+    return payment;
+  }
+
   Future<User> createUser(String name, Uint8List? avatar) async {
     Database db = await instance.database;
     if (kDebugMode) Future.delayed(const Duration(seconds: 1));
@@ -115,7 +121,7 @@ class DatabaseHelper {
       INNER JOIN $_debtorsTable
       ON $_debtsTable.id=$_debtorsTable.debtId
       WHERE $_debtorsTable.userId = ?
-      ORDER BY date DESC, id DESC
+      ORDER BY date ASC, id DESC
     ''', [userId])).map((e) => Debt.fromMap(e)).toList();
 
     List<dynamic> combined = [...payments, ...debts];
@@ -143,10 +149,10 @@ class DatabaseHelper {
       return debtorUsers;
   }
 
-  Future<List<Debt>> fetchDebts() async {
+  Future<List<Debt>> fetchAllDebts() async {
     Database db = await instance.database;
     if (kDebugMode) await Future.delayed(const Duration(seconds: 1));
-    var res = await db.query(_debtsTable, orderBy: 'date DESC, id DESC');
+    var res = await db.query(_debtsTable, orderBy: 'date ASC, id DESC');
     return res.map((e) => Debt.fromMap(e)).toList();
   }
 
@@ -159,12 +165,13 @@ class DatabaseHelper {
 
   Future<double> fetchDebtTotal({required int debtId}) async {
     Database db = await instance.database;
-    var res = await db.query(_debtorsTable, where: 'debtId = ?', whereArgs: [debtId]);
-    var amountsInt = res.map((e) => e['amount'] as int);
-    int totalInt = 0;
-    for (var amount in amountsInt) {
-      totalInt += amount;
-    }
+    var res = await db.rawQuery('''
+      SELECT sum(amount) AS total
+      FROM $_debtorsTable
+      WHERE $_debtorsTable.debtId = ?
+    ''', [debtId]);
+
+    int totalInt = res[0]['total'] as dynamic;
     return totalInt/100;
   }
 
@@ -192,14 +199,14 @@ class DatabaseHelper {
     });
   }
 
-  Future<Payment> createPayment({required int userId, required double amount, String? description, required DateTime date}) async {
+  Future<Payment> createPayment({required int userId, required int amount, String? description, required DateTime date}) async {
     Database db = await instance.database;
 
     if (kDebugMode) Future.delayed(const Duration(seconds: 3));
 
     var id = await db.insert(_paymentsTable, {
       "userId": userId,
-      "amount": (amount*100).round(),
+      "amount": amount,
       "description": description,
       "date": date.toIso8601String()
     });
@@ -207,7 +214,7 @@ class DatabaseHelper {
     return Payment(
       id: id,
       userId: userId,
-      amount: (amount*100).round(),
+      amount: amount,
       description: description,
       date: date
     );

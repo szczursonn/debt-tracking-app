@@ -1,10 +1,16 @@
-import 'package:debt_tracking_app/DatabaseHelper.dart';
+import 'package:debt_tracking_app/database_helper.dart';
 import 'package:debt_tracking_app/pages/debt_create_page.dart';
 import 'package:debt_tracking_app/pages/debt_page.dart';
 import 'package:debt_tracking_app/pages/payment_create_page.dart';
+import 'package:debt_tracking_app/pages/payment_page.dart';
 import 'package:debt_tracking_app/pages/user_create_page.dart';
-import 'package:debt_tracking_app/widgets/UserAvatar.dart';
+import 'package:debt_tracking_app/providers/settings_provider.dart';
+import 'package:debt_tracking_app/utils.dart';
+import 'package:debt_tracking_app/widgets/debt_icon.dart';
+import 'package:debt_tracking_app/widgets/payment_icon.dart';
+import 'package:debt_tracking_app/widgets/user_avatar.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../helper_models.dart';
 import '../models.dart';
@@ -60,7 +66,7 @@ class _UserPageState extends State<UserPage> {
   }
 
   void onAddPaymentClick() async {
-    var res = await Navigator.push(context, MaterialPageRoute(builder: (context) => PaymentCreatePage(user: _user)));
+    var res = await Navigator.push(context, MaterialPageRoute(builder: (context) => PaymentCreatePage(userId: _user.id)));
     if (res is Payment) {
       setState(() {
         _history.add(res);
@@ -102,9 +108,17 @@ class _UserPageState extends State<UserPage> {
         return Card(
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ListTile(
-                title: Text('${date.day}/${date.month}/${date.year}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              Container(
+                margin: const EdgeInsets.only(top: 12, left: 12, bottom: 4),
+                child: Text(
+                  Utils.formatDate(date),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 17
+                  )
+                ),
               ),
               const Divider(thickness: 3),
               Column(
@@ -122,7 +136,9 @@ class _UserPageState extends State<UserPage> {
     late String? description;
     late Widget trailingWidget;
     late VoidCallback tapCb;
-    late CircleAvatar avatarWidget;
+    late Widget avatarWidget;
+
+    String currency = Provider.of<SettingsProvider>(context).currency;
 
     if (item is Debt) {
       title = item.title;
@@ -131,31 +147,37 @@ class _UserPageState extends State<UserPage> {
         future: DatabaseHelper.instance.fetchUserDebtTotal(userId: _user.id, debtId: item.id),
         builder: (context, snapshot) {
           if (snapshot.hasData) {
-            return Text('-${snapshot.data!.toStringAsFixed(2)} zł', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.red));
+            return Text('-${snapshot.data!.toStringAsFixed(2)} $currency', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.red));
           } else {
             return const Text('loading...');
           }
         }
       );
       tapCb = () async {
-        await Navigator.push(context, MaterialPageRoute(builder: (context) => DebtPage(debt: item)));
+        var res = await Navigator.push(context, MaterialPageRoute(builder: (context) => DebtPage(debt: item)));
+        if (res is Debt) {
+          setState(() {
+            _history.add(res);
+            sortHistory();
+          });
+        }
       };
-      avatarWidget = const CircleAvatar(
-        backgroundColor: Colors.amber,
-        child: Icon(Icons.paid)
-      );
+      avatarWidget = const DebtIcon();
 
     } else if (item is Payment) {
       title = 'Payment';
       description = item.description;
-      trailingWidget = Text('+${(item.amount/100).toStringAsFixed(2)} zł', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.green));
+      trailingWidget = Text('+${(item.amount/100).toStringAsFixed(2)} $currency', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.green));
       tapCb = () async {
-
+        var res = await Navigator.push(context, MaterialPageRoute(builder: (context) => PaymentPage(payment: item)));
+        if (res is Payment) {
+          setState(() {
+            _history.add(res);
+            sortHistory();
+          });
+        }
       };
-      avatarWidget = const CircleAvatar(
-        backgroundColor: Colors.lime,
-        child: Icon(Icons.credit_score)
-      );
+      avatarWidget = const PaymentIcon();
 
     } else {
       throw Error();
@@ -163,21 +185,19 @@ class _UserPageState extends State<UserPage> {
 
     return InkWell(
       onTap: tapCb,
-      child: Card(
-        child: Column(
-          children: [
-            ListTile(
-              title: Text(
-                title,
-                style: const TextStyle(fontWeight: FontWeight.bold)
-              ),
-              subtitle: description == null ? null : Text(description, overflow: TextOverflow.ellipsis, maxLines: 2),
-              leading: avatarWidget,
-              trailing: trailingWidget,
+      child: Column(
+        children: [
+          ListTile(
+            title: Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.bold)
             ),
-          ],
-        )
-      ),
+            subtitle: description == null ? null : Text(description, overflow: TextOverflow.ellipsis, maxLines: 2),
+            leading: avatarWidget,
+            trailing: trailingWidget,
+          ),
+        ],
+      )
     );
   }
 
@@ -212,9 +232,11 @@ class _UserPageState extends State<UserPage> {
                     if (snapshot.hasData) {
                       UserBalance x = snapshot.data as UserBalance;
                       int bal = x.paid-x.owed;
-                      return Text('${(bal/100).toStringAsFixed(2)} zł', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 30, color: (bal >= 0 ? Colors.green : Colors.red)));
+                      return Consumer<SettingsProvider>(
+                        builder: (context, value, _) => Text('${(bal/100).toStringAsFixed(2)} ${value.currency}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 30, color: (bal >= 0 ? Colors.green : Colors.red)))
+                      );
                     }
-                    return const Text('loading...');
+                    return const CircularProgressIndicator();
                 }),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,

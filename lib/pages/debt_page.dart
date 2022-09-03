@@ -1,7 +1,10 @@
-import 'package:debt_tracking_app/DatabaseHelper.dart';
+import 'package:debt_tracking_app/database_helper.dart';
 import 'package:debt_tracking_app/helper_models.dart';
-import 'package:debt_tracking_app/widgets/UserAvatar.dart';
+import 'package:debt_tracking_app/providers/settings_provider.dart';
+import 'package:debt_tracking_app/widgets/debt_icon.dart';
+import 'package:debt_tracking_app/widgets/user_avatar.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../models.dart';
 
@@ -47,7 +50,9 @@ class _DebtPageState extends State<DebtPage> {
               style: const TextStyle(fontWeight: FontWeight.bold)
             ),
             leading: UserAvatar(user: debtor.user),
-            trailing: Text('${(debtor.amount/100).toStringAsFixed(2)} PLN')
+            trailing: Consumer<SettingsProvider>(
+              builder: (context, value, _) => Text('${(debtor.amount/100).toStringAsFixed(2)}${value.currency}')
+            )
           ),
         ],
       )
@@ -81,10 +86,14 @@ class _DebtPageState extends State<DebtPage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                const DebtIcon(radius: 56),
+                const SizedBox(height: 12),
                 Text(widget.debt.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 24)),
                 Container(margin: const EdgeInsets.only(left: 10, right: 10), child: Text(widget.debt.description ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
                 const SizedBox(height: 8),
-                _loading ? const Text('loading...') : Text('Total: ${(getTotal()/100).toStringAsFixed(2)} PLN', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+                _loading ? const Text('loading...') : Consumer<SettingsProvider>(
+                  builder: (context, value, _) => Text('Total: ${(getTotal()/100).toStringAsFixed(2)}${value.currency}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20))
+                ),
                 const Divider(color: Colors.black),
                 _loading ? const CircularProgressIndicator() : Expanded(child: buildDebtorList())
               ],

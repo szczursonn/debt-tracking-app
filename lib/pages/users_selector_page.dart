@@ -1,6 +1,6 @@
-import 'package:debt_tracking_app/DatabaseHelper.dart';
+import 'package:debt_tracking_app/database_helper.dart';
 import 'package:debt_tracking_app/pages/user_create_page.dart';
-import 'package:debt_tracking_app/widgets/UserAvatar.dart';
+import 'package:debt_tracking_app/widgets/user_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 

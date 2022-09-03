@@ -1,9 +1,13 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import '../models.dart';
 
 class UserAvatar extends StatelessWidget {
   const UserAvatar({Key? key, required this.user, this.radius}): super(key: key);
+
+  static const List<Color> colors = [];
 
   final User user;
   final double? radius;
@@ -16,14 +20,15 @@ class UserAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     
-    bool useAv = user.avatar != null;
+    bool hasAvatar = user.avatar != null;
 
     return Hero(
       tag: 'useravatar-${user.name}',
       child: CircleAvatar(
         radius: radius,
-        backgroundImage: useAv ? MemoryImage(user.avatar!) : null,
-        child: !useAv ? Text(getInitials(user.name)) : null,
+        backgroundImage: hasAvatar ? MemoryImage(user.avatar!) : null,
+        backgroundColor: !hasAvatar ? Colors.accents[Random(user.id).nextInt(Colors.accents.length)] : null,
+        child: !hasAvatar ? Text(getInitials(user.name), style: TextStyle(fontSize: radius)) : null,
       )
     );
   }
