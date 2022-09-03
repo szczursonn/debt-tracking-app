@@ -1,5 +1,6 @@
 import 'package:debt_tracking_app/database_helper.dart';
 import 'package:debt_tracking_app/pages/users_selector_page.dart';
+import 'package:debt_tracking_app/providers/user_provider.dart';
 import 'package:debt_tracking_app/utils.dart';
 import 'package:debt_tracking_app/widgets/user_avatar.dart';
 import 'package:flutter/material.dart';
@@ -9,9 +10,9 @@ import '../models.dart';
 import '../providers/settings_provider.dart';
 
 class DebtCreatePage extends StatefulWidget {
-  const DebtCreatePage({Key? key, this.initialUser}) : super(key: key);
+  const DebtCreatePage({Key? key, this.initialUserId}) : super(key: key);
 
-  final User? initialUser;
+  final int? initialUserId;
 
   @override
   State<DebtCreatePage> createState() => _DebtCreatePageState();
@@ -21,7 +22,7 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
 
   final _formKey = GlobalKey<FormState>();
 
-  List<User> _users = [];
+  List<int> _userIds = [];
   Map<int,TextEditingController> _usersTextControllers = {};
   final TextEditingController _amountTextController = TextEditingController(text: '0');
   final TextEditingController _dateTextController = TextEditingController(text: '');
@@ -51,15 +52,15 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
   }
 
   void tryAutoDistribute() {
-    if (!_isAutoDistribute || _users.isEmpty) return;
+    if (!_isAutoDistribute || _userIds.isEmpty) return;
 
     var total = double.tryParse(_amountTextController.text.replaceAll(',', '.'));
     if (total == null) return;
 
     late String chunk;
 
-    if (_users.length > 1) {
-      chunk = (total/_users.length).ceil().toStringAsFixed(2);
+    if (_userIds.length > 1) {
+      chunk = (total/_userIds.length).ceil().toStringAsFixed(2);
     } else {
       chunk = total.toStringAsFixed(2);
     }
@@ -67,7 +68,7 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
       for (var controller in _usersTextControllers.values) {
         controller.text = chunk;
       }
-      _autoDistributeError = total-(double.parse(chunk)*_users.length);
+      _autoDistributeError = total-(double.parse(chunk)*_userIds.length);
     });
   }
 
@@ -85,9 +86,9 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
   void setupUserTextControllers() {
     disposeUserTextControllers();
 
-    for (var user in _users) {
+    for (var userId in _userIds) {
       var controller = TextEditingController();
-      _usersTextControllers[user.id] = controller;
+      _usersTextControllers[userId] = controller;
       controller.addListener(onUserTextControllerChange(controller));
     }
 
@@ -95,11 +96,11 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
   }
 
   void onSelectUsersClick() async {
-    List<User>? selectedUsers = await Navigator.push(context, MaterialPageRoute(builder: (context) => UsersSelectorPage(previouslySelectedUsers: _users)));
+    var res = await Navigator.push(context, MaterialPageRoute(builder: (context) => UsersSelectorPage(previouslySelectedUsersIds: _userIds)));
     if (!mounted) return;
-    if (selectedUsers != null) {
+    if (res is List) {
       setState(() {
-        _users = selectedUsers;
+        _userIds = res as dynamic;
         setupUserTextControllers();
       });
     }
@@ -150,9 +151,9 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
     });
     _dateTextController.text = Utils.formatDate(_date);
 
-    if (widget.initialUser != null) {
+    if (widget.initialUserId != null) {
       setState(() {
-        _users.add(widget.initialUser!);
+        _userIds.add(widget.initialUserId!);
         setupUserTextControllers();
       });
     }
@@ -178,56 +179,59 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
     return false;
   }
 
-  Widget buildUserCard(User user) => Card(
-    elevation: 2,
-    child: SizedBox(
-      height: 80,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          ListTile(
-            leading: UserAvatar(user: user),
-            title: Text(
-              user.name,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            trailing: SizedBox(
-              width: 100,
-              height: 60,
-              child: TextFormField(
-                controller: _usersTextControllers[user.id],
-                decoration: const InputDecoration(
-                  labelText: 'Amount',
-                  labelStyle: TextStyle(
-                    fontSize: 14,
-                  ),
-                  errorStyle: TextStyle(
-                    fontSize: 10,
-                  ),
-                  errorMaxLines: 2,
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                readOnly: _isAutoDistribute || _isSaving,
-                validator: (value) {
-                  var number = double.tryParse(value!.replaceAll(',', '.'));
-                  if (number == null) {
-                    return 'Invalid number';
-                  }
-                  if (number <= 0) {
-                    return 'Must be greater than 0';
-                  }
-                  return null;
-                },
+  Widget buildUserCard(int userId) => Selector<UserProvider, User>(
+    selector: (context, provider) => provider.getUser(userId)!,
+    builder: (context, user, _) => Card(
+      elevation: 2,
+      child: SizedBox(
+        height: 80,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ListTile(
+              leading: UserAvatar(user: user),
+              title: Text(
+                user.name,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
-          )
-        ],
-      ),
-    )
+              trailing: SizedBox(
+                width: 100,
+                height: 60,
+                child: TextFormField(
+                  controller: _usersTextControllers[user.id],
+                  decoration: const InputDecoration(
+                    labelText: 'Amount',
+                    labelStyle: TextStyle(
+                      fontSize: 14,
+                    ),
+                    errorStyle: TextStyle(
+                      fontSize: 10,
+                    ),
+                    errorMaxLines: 2,
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  readOnly: _isAutoDistribute || _isSaving,
+                  validator: (value) {
+                    var number = double.tryParse(value!.replaceAll(',', '.'));
+                    if (number == null) {
+                      return 'Invalid number';
+                    }
+                    if (number <= 0) {
+                      return 'Must be greater than 0';
+                    }
+                    return null;
+                  },
+                ),
+              ),
+            )
+          ],
+        ),
+      )
+    ),
   );
 
   @override
@@ -321,16 +325,16 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
                   ],
                 ),
                 // ROUNDING ERROR MSG
-                (_isAutoDistribute && _autoDistributeError.abs() >= 0.00001 && _users.isNotEmpty) ? Center(
+                (_isAutoDistribute && _autoDistributeError.abs() >= 0.00001 && _userIds.isNotEmpty) ? Center(
                   child: Consumer<SettingsProvider>(
-                    builder: (context, value, _) => Text('Rounding Error: ${_autoDistributeError<0 ? 'Overcharging' : 'Losing'} ${(_autoDistributeError/_users.length).abs().toStringAsFixed(3)}${value.currency}/person (real total: ${getRealTotal().toStringAsFixed(2)} ${value.currency})')
+                    builder: (context, value, _) => Text('Rounding Error: ${_autoDistributeError<0 ? 'Overcharging' : 'Losing'} ${(_autoDistributeError/_userIds.length).abs().toStringAsFixed(3)}${value.currency}/person (real total: ${getRealTotal().toStringAsFixed(2)} ${value.currency})')
                   )
                 ) : Container(),
                 // CHOOSE USERS BTN
                 TextButton(onPressed: _isSaving ? null : onSelectUsersClick, child: const Text('Choose users')),
                 // USERS LIST
                 Column(
-                  children: _users.map(buildUserCard).toList(),
+                  children: _userIds.map(buildUserCard).toList(),
                 ),
                 // SUBMIT BTN
                 AspectRatio(
@@ -338,7 +342,7 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 16.0),
                     child: ElevatedButton(
-                      onPressed: (_isSaving || _users.isEmpty) ? null : onSubmitClick,
+                      onPressed: (_isSaving || _userIds.isEmpty) ? null : onSubmitClick,
                       child: const Text('Create'),
                     ),
                   ),

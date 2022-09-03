@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsProvider extends ChangeNotifier {
+  bool _loading = false;
   ThemeMode themeMode = ThemeMode.system;
   String currency = 'zł';
 
@@ -23,6 +24,8 @@ class SettingsProvider extends ChangeNotifier {
         return systemThemeKey;
     }
   }
+
+  bool get loading => _loading;
 
   Future<void> setThemeMode(ThemeMode themeMode) async {
     if (kDebugMode) await Future.delayed(const Duration(milliseconds: 500));
@@ -45,8 +48,11 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   Future<void> load() async {
-    final prefs = await SharedPreferences.getInstance();
+    _loading = true;
+    notifyListeners();
 
+    final prefs = await SharedPreferences.getInstance();
+    // THEME
     String? themeKey = prefs.getString(themePrefsKey);
     switch (themeKey) {
       case lightThemeKey:
@@ -59,10 +65,11 @@ class SettingsProvider extends ChangeNotifier {
         themeMode = ThemeMode.system;
         break;
     }
-
+    // CURRENCY
     String? currency = prefs.getString(currencyPrefsKey);
     if (currency != null) this.currency = currency;
 
+    _loading = false;
     notifyListeners();
   }
 }

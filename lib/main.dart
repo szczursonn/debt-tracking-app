@@ -3,6 +3,7 @@ import 'package:debt_tracking_app/pages/settings_page.dart';
 import 'package:debt_tracking_app/pages/statistics_page.dart';
 import 'package:debt_tracking_app/pages/users_page.dart';
 import 'package:debt_tracking_app/providers/settings_provider.dart';
+import 'package:debt_tracking_app/providers/user_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -27,12 +28,24 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) {
-        var provider = SettingsProvider();
-        provider.load();
-        return provider;
-      },
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (context) {
+            var provider = SettingsProvider();
+            provider.load();
+            return provider;
+          },
+        ),
+        ChangeNotifierProvider(
+          create: (context) {
+            var provider = UserProvider();
+            provider.load();
+            return provider;
+          },
+        )
+      ],
+      
       builder: (context, _) {
         final settingsProvider = Provider.of<SettingsProvider>(context);
         return MaterialApp(
@@ -47,31 +60,48 @@ class MyApp extends StatelessWidget {
             brightness: Brightness.dark
           ),
           themeMode: settingsProvider.themeMode,
-          home: DefaultTabController(
-            length: 3,
-            child: Scaffold(
-              appBar: AppBar(
-                actions: const [
-                  SettingsButton()
-                ],
-                bottom: const TabBar(
-                  tabs: [
-                    Tab(icon: Icon(Icons.person)),
-                    Tab(icon: Icon(Icons.euro)),
-                    Tab(icon: Icon(Icons.show_chart))
-                  ],
+          home: Selector2<SettingsProvider, UserProvider, bool>(
+            selector: (context, settingsProvider, userProvider) => settingsProvider.loading||userProvider.loading,
+            builder: (context, loading, _) => loading ? 
+              Scaffold(
+                body: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 8),
+                      Text('Loading database', style: TextStyle(fontWeight: FontWeight.w500))
+                    ],
+                  ),
                 ),
-                title: const Text('debt-tracking-app'),
-              ),
-              body: const TabBarView(
-                children: [
-                  UsersPage(),
-                  DebtsPage(),
-                  StatisticsPage()
-                ],
               )
-            )
-          ),//
+              : 
+              DefaultTabController(
+                length: 3,
+                child: Scaffold(
+                  appBar: AppBar(
+                    actions: const [
+                      SettingsButton()
+                    ],
+                    bottom: const TabBar(
+                      tabs: [
+                        Tab(icon: Icon(Icons.person)),
+                        Tab(icon: Icon(Icons.euro)),
+                        Tab(icon: Icon(Icons.show_chart))
+                      ],
+                    ),
+                    title: const Text('debt-tracking-app'),
+                  ),
+                  body: const TabBarView(
+                    children: [
+                      UsersPage(),
+                      DebtsPage(),
+                      StatisticsPage()
+                    ],
+                  )
+                )
+              ),
+          ),
         );
       },
     );

@@ -1,15 +1,17 @@
 import 'dart:typed_data';
 
 import 'package:debt_tracking_app/database_helper.dart';
+import 'package:debt_tracking_app/providers/user_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 
 import '../models.dart';
 
 class UserCreatePage extends StatefulWidget {
-  const UserCreatePage({Key? key, this.editedUser}) : super(key: key);
+  const UserCreatePage({Key? key, this.editedUserId}) : super(key: key);
 
-  final User? editedUser;
+  final int? editedUserId;
 
   @override
   State<UserCreatePage> createState() => _UserCreatePageState();
@@ -20,8 +22,9 @@ class _UserCreatePageState extends State<UserCreatePage> {
   final _formKey = GlobalKey<FormState>();
   final _picker = ImagePicker();
 
+  final TextEditingController _nameTextController = TextEditingController(text: '');
+
   bool _saving = false;
-  String _name = '';
   Uint8List? _avatar;
 
   Future pickImage(ImageSource source) async {
@@ -39,20 +42,22 @@ class _UserCreatePageState extends State<UserCreatePage> {
   void onSubmitClick() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _saving = true);
-      late User user;
-      if (widget.editedUser == null) {
-        user = await DatabaseHelper.instance.createUser(_name, _avatar);
+      
+      var userProvider = Provider.of<UserProvider>(context, listen: false);
+
+      if (widget.editedUserId == null) {
+        await userProvider.createUser(_nameTextController.text, _avatar);
       } else {
-        user = await DatabaseHelper.instance.updateUser(User.fromMap({
-          'id': widget.editedUser!.id,
-          'name': _name,
-          'avatar': _avatar
-        }));
+        await userProvider.updateUser(User(
+          id: widget.editedUserId!, 
+          name: _nameTextController.text, 
+          avatar: _avatar
+        ));
       }
       
       if (!mounted) return;
       setState(() => _saving = false);
-      Navigator.pop(context, user);
+      Navigator.pop(context);
     }
   }
 
@@ -95,12 +100,22 @@ class _UserCreatePageState extends State<UserCreatePage> {
   @override
   void initState() {
     super.initState();
-    if (widget.editedUser != null) {
-      setState(() {
-        _name = widget.editedUser!.name;
-        _avatar = widget.editedUser!.avatar;
-      });
+    if (widget.editedUserId != null) {
+      var provider = Provider.of<UserProvider>(context, listen: false);
+      var user = provider.getUser(widget.editedUserId!);
+      if (user != null) {
+        setState(() {
+          _nameTextController.text = user.name;
+          _avatar = user.avatar;
+        });
+      }
     }
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    _nameTextController.dispose();
   }
 
   @override
@@ -113,7 +128,7 @@ class _UserCreatePageState extends State<UserCreatePage> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text(widget.editedUser == null ? 'Create new user' : 'Edit user'),
+          title: Text(widget.editedUserId == null ? 'Create new user' : 'Edit user'),
         ),
         body: Container(
           margin: const EdgeInsets.all(24),
@@ -133,14 +148,11 @@ class _UserCreatePageState extends State<UserCreatePage> {
                   ),
                 ),
                 TextFormField(
+                  controller: _nameTextController,
                   decoration: const InputDecoration(
                     labelText: 'Name',
                     border: UnderlineInputBorder()
                   ),
-                  initialValue: widget.editedUser?.name,
-                  onChanged: (String? value) {
-                    if (value != null) setState(() => _name = value);
-                  },
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Name cannot be empty';
@@ -154,7 +166,7 @@ class _UserCreatePageState extends State<UserCreatePage> {
                     padding: const EdgeInsets.symmetric(vertical: 16.0),
                     child: ElevatedButton(
                       onPressed: _saving ? null : onSubmitClick,
-                      child: Text(widget.editedUser == null ? 'Create' : 'Edit'),
+                      child: Text(widget.editedUserId == null ? 'Create' : 'Edit'),
                     ),
                   ),
                 ),
