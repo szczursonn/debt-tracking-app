@@ -2,6 +2,8 @@ import 'package:debt_tracking_app/database_helper.dart';
 import 'package:debt_tracking_app/helper_models.dart';
 import 'package:debt_tracking_app/pages/user_create_page.dart';
 import 'package:debt_tracking_app/pages/user_page.dart';
+import 'package:debt_tracking_app/providers/debt_provider.dart';
+import 'package:debt_tracking_app/providers/payment_provider.dart';
 import 'package:debt_tracking_app/providers/settings_provider.dart';
 import 'package:debt_tracking_app/providers/user_provider.dart';
 import 'package:flutter/material.dart';
@@ -90,18 +92,11 @@ class UserListItem extends StatelessWidget {
               user.name,
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            trailing: FutureBuilder<UserBalance>(
-              future: DatabaseHelper.instance.fetchUserBalance(user.id), 
-              builder: (context, snapshot) {
-                if (snapshot.hasData) {
-                  UserBalance data = snapshot.data!;
-                  int bal = data.paid-data.owed;
-                  return Consumer<SettingsProvider>(
-                    builder: (context, value, _) => Text('${(bal/100).toStringAsFixed(2)} ${value.currency}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: (bal >= 0) ? Colors.green : Colors.redAccent)),
-                  );
-                }
-                return const Text('loading...');
-              }
+            trailing: Selector2<DebtProvider, PaymentProvider, int>(
+              selector: (context, debtProvider, paymentProvider) => paymentProvider.getUserPaymentsTotal(userId)-debtProvider.getUserTotalOwedAmount(userId),
+              builder: (context, bal, _) => Consumer<SettingsProvider>(
+                builder: (context, value, _) => Text('${(bal/100).toStringAsFixed(2)} ${value.currency}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: (bal >= 0) ? Colors.green : Colors.redAccent)),
+              ),
             ),
             onTap: onUserClick(context, user),
           )

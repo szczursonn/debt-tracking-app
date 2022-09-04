@@ -1,5 +1,6 @@
 import 'package:debt_tracking_app/database_helper.dart';
 import 'package:debt_tracking_app/pages/users_selector_page.dart';
+import 'package:debt_tracking_app/providers/debt_provider.dart';
 import 'package:debt_tracking_app/providers/user_provider.dart';
 import 'package:debt_tracking_app/utils.dart';
 import 'package:debt_tracking_app/widgets/user_avatar.dart';
@@ -38,7 +39,9 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
     if (_formKey.currentState!.validate()) {
       setState(() => _isSaving = true);
 
-      var debt = await DatabaseHelper.instance.createDebt(
+      var provider = Provider.of<DebtProvider>(context, listen: false);
+
+      await provider.createDebt(
         title: _title,
         description: _description,
         date: _date,
@@ -47,7 +50,7 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
       if (!mounted) return;
 
       setState(() => _isSaving = false);
-      Navigator.pop(context, debt);
+      Navigator.pop(context);
     }
   }
 

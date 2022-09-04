@@ -4,6 +4,8 @@ import 'package:debt_tracking_app/pages/debt_page.dart';
 import 'package:debt_tracking_app/pages/payment_create_page.dart';
 import 'package:debt_tracking_app/pages/payment_page.dart';
 import 'package:debt_tracking_app/pages/user_create_page.dart';
+import 'package:debt_tracking_app/providers/debt_provider.dart';
+import 'package:debt_tracking_app/providers/payment_provider.dart';
 import 'package:debt_tracking_app/providers/settings_provider.dart';
 import 'package:debt_tracking_app/providers/user_provider.dart';
 import 'package:debt_tracking_app/utils.dart';
@@ -26,61 +28,29 @@ class UserPage extends StatefulWidget {
 }
 
 class _UserPageState extends State<UserPage> {
-  late List<dynamic> _history;  // List<Payment|Debt>
-  bool _loading = false;
-
-  void loadHistory() async {
-    setState(() => _loading = true);
-
-    var history = await DatabaseHelper.instance.fetchUserHistory(widget.userId);
-    if (!mounted) return;
-    setState(() {
-      _history = history;
-      _loading = false;
-    });
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    loadHistory();
-  }
 
   void onEditClick() async {
     await Navigator.push(context, MaterialPageRoute(builder: (context) => UserCreatePage(editedUserId: widget.userId)));
   }
 
   void onAddDebtClick() async {
-    var res = await Navigator.push(context, MaterialPageRoute(builder: (context) => DebtCreatePage(initialUserId: widget.userId)));
-    if (res is Debt) {
-      setState(() {
-        _history.add(res);
-        sortHistory();
-      });
-    }
+    await Navigator.push(context, MaterialPageRoute(builder: (context) => DebtCreatePage(initialUserId: widget.userId)));
   }
 
   void onAddPaymentClick() async {
-    var res = await Navigator.push(context, MaterialPageRoute(builder: (context) => PaymentCreatePage(userId: widget.userId)));
-    if (res is Payment) {
-      setState(() {
-        _history.add(res);
-        sortHistory();
-      });
-    }
+    await Navigator.push(context, MaterialPageRoute(builder: (context) => PaymentCreatePage(userId: widget.userId)));
   }
 
-  void sortHistory() {
-    _history.sort((a,b) => a.date.compareTo(b.date));
-  }
-
-  Widget buildHistory() {
-    List<List<dynamic>> groups = [];
+  Widget buildHistory(List<HistoryListItem> items) {
+    List<List<HistoryListItem>> groups = [];
 
     DateTime? prevDate;
     int index = -1;
 
-    for (var item in _history) {
+    var sortedItems = [...items];
+    sortedItems.sort((a,b) => a.date.compareTo(b.date));
+
+    for (var item in sortedItems) {
       if (prevDate != null && item.date.day == prevDate.day && item.date.month == prevDate.month && item.date.year == prevDate.year) {
         groups[index].add(item);
       } else {
@@ -126,74 +96,55 @@ class _UserPageState extends State<UserPage> {
     );
   }
 
-  Widget buildItem(dynamic item) {
-    late String title;
-    late String? description;
-    late Widget trailingWidget;
-    late VoidCallback tapCb;
-    late Widget avatarWidget;
+  Widget buildItem(HistoryListItem item) {
 
     String currency = Provider.of<SettingsProvider>(context).currency;
 
-    if (item is Debt) {
-      title = item.title;
-      description = item.description;
-      trailingWidget = FutureBuilder<double>(
-        future: DatabaseHelper.instance.fetchUserDebtTotal(userId: widget.userId, debtId: item.id),
-        builder: (context, snapshot) {
-          if (snapshot.hasData) {
-            return Text('-${snapshot.data!.toStringAsFixed(2)} $currency', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.red));
-          } else {
-            return const Text('loading...');
-          }
-        }
-      );
-      tapCb = () async {
-        var res = await Navigator.push(context, MaterialPageRoute(builder: (context) => DebtPage(debt: item)));
-        if (res is Debt) {
-          setState(() {
-            _history.add(res);
-            sortHistory();
-          });
-        }
-      };
-      avatarWidget = const DebtIcon();
-
-    } else if (item is Payment) {
-      title = 'Payment';
-      description = item.description;
-      trailingWidget = Text('+${(item.amount/100).toStringAsFixed(2)} $currency', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.green));
-      tapCb = () async {
-        var res = await Navigator.push(context, MaterialPageRoute(builder: (context) => PaymentPage(payment: item)));
-        if (res is Payment) {
-          setState(() {
-            _history.add(res);
-            sortHistory();
-          });
-        }
-      };
-      avatarWidget = const PaymentIcon();
-
-    } else {
-      throw Error();
-    }
-
-    return InkWell(
-      onTap: tapCb,
-      child: Column(
-        children: [
-          ListTile(
-            title: Text(
-              title,
-              style: const TextStyle(fontWeight: FontWeight.bold)
-            ),
-            subtitle: description == null ? null : Text(description, overflow: TextOverflow.ellipsis, maxLines: 2),
-            leading: avatarWidget,
-            trailing: trailingWidget,
+    switch (item.type) {
+      case HistoryListItemType.debt:
+        return Selector<DebtProvider, Debt>(
+          selector: (context, provider) => provider.getDebt(item.id)!,
+          builder: (context, debt, _) => InkWell(
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => DebtPage(debtId: debt.id))),
+            child: Column(
+              children: [
+                ListTile(
+                  title: Text(
+                    debt.title,
+                    style: const TextStyle(fontWeight: FontWeight.bold)
+                  ),
+                  subtitle: debt.description == null ? null : Text(debt.description!, overflow: TextOverflow.ellipsis, maxLines: 2),
+                  leading: const DebtIcon(),
+                  trailing: Selector<DebtProvider, Debtor>(
+                    selector: (context, provider) => provider.getDebtor(userId: widget.userId, debtId: item.id),
+                    builder: (context, debtor, _) => Text('-${(debtor.amount/100).toStringAsFixed(2)} $currency', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.red))
+                  ),
+                ),
+              ],
+            )
           ),
-        ],
-      )
-    );
+        );
+      case HistoryListItemType.payment:
+        return Selector<PaymentProvider, Payment>(
+          selector: (context, provider) => provider.getPayment(widget.userId, item.id)!,
+          builder: (context, payment, _) => InkWell(
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => PaymentPage(userId: widget.userId, paymentId: item.id))),
+            child: Column(
+              children: [
+                ListTile(
+                  title: const Text(
+                    'Payment',
+                    style: TextStyle(fontWeight: FontWeight.bold)
+                  ),
+                  subtitle: payment.description == null ? null : Text(payment.description!, overflow: TextOverflow.ellipsis, maxLines: 2),
+                  leading: const PaymentIcon(),
+                  trailing: Text('+${(payment.amount/100).toStringAsFixed(2)} $currency', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.green)),
+                ),
+              ],
+            )
+          ),
+        );
+    }
   }
 
   @override
@@ -219,18 +170,12 @@ class _UserPageState extends State<UserPage> {
                 children: [
                   UserAvatar(user: user, radius: 56),
                   Text(user.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 32)),
-                  FutureBuilder(
-                    future: DatabaseHelper.instance.fetchUserBalance(user.id),
-                    builder: (context, snapshot) {
-                      if (snapshot.hasData) {
-                        UserBalance x = snapshot.data as UserBalance;
-                        int bal = x.paid-x.owed;
-                        return Consumer<SettingsProvider>(
-                          builder: (context, value, _) => Text('${(bal/100).toStringAsFixed(2)} ${value.currency}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 30, color: (bal >= 0 ? Colors.green : Colors.red)))
-                        );
-                      }
-                      return const CircularProgressIndicator();
-                  }),
+                  Selector2<DebtProvider, PaymentProvider, int>(
+                    selector: (context, debtProvider, paymentProvider) => paymentProvider.getUserPaymentsTotal(widget.userId)-debtProvider.getUserTotalOwedAmount(widget.userId),
+                    builder: (context, bal, _) => Consumer<SettingsProvider>(
+                      builder: (context, value, _) => Text('${(bal/100).toStringAsFixed(2)} ${value.currency}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 30, color: (bal >= 0 ? Colors.green : Colors.red)))
+                    ),
+                  ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -242,7 +187,14 @@ class _UserPageState extends State<UserPage> {
                   const Divider(color: Colors.black),
                   const Text('History', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                   const SizedBox(height: 8),
-                  _loading ? const CircularProgressIndicator() : buildHistory()
+                  Selector2<PaymentProvider, DebtProvider, List<HistoryListItem>>(
+                    selector: (context, paymentProvider, debtProvider) {
+                      var payments = paymentProvider.getUserPaymentsIdsWithDates(widget.userId);
+                      var debts = debtProvider.getUserDebtsIdsWithDates(widget.userId);
+                      return [...payments, ...debts];
+                    },
+                    builder: (context, items, _) => buildHistory(items),
+                  )
                 ],
               ),
             ),

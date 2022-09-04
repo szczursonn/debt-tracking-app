@@ -1,7 +1,10 @@
+import 'package:debt_tracking_app/models.dart';
 import 'package:debt_tracking_app/pages/debts_page.dart';
 import 'package:debt_tracking_app/pages/settings_page.dart';
 import 'package:debt_tracking_app/pages/statistics_page.dart';
 import 'package:debt_tracking_app/pages/users_page.dart';
+import 'package:debt_tracking_app/providers/debt_provider.dart';
+import 'package:debt_tracking_app/providers/payment_provider.dart';
 import 'package:debt_tracking_app/providers/settings_provider.dart';
 import 'package:debt_tracking_app/providers/user_provider.dart';
 import 'package:flutter/material.dart';
@@ -43,6 +46,20 @@ class MyApp extends StatelessWidget {
             provider.load();
             return provider;
           },
+        ),
+        ChangeNotifierProvider(
+          create: (context) {
+            var provider = PaymentProvider();
+            provider.load();
+            return provider;
+          },
+        ),
+        ChangeNotifierProvider(
+          create: (context) {
+            var provider = DebtProvider();
+            provider.load();
+            return provider;
+          },
         )
       ],
       
@@ -60,8 +77,8 @@ class MyApp extends StatelessWidget {
             brightness: Brightness.dark
           ),
           themeMode: settingsProvider.themeMode,
-          home: Selector2<SettingsProvider, UserProvider, bool>(
-            selector: (context, settingsProvider, userProvider) => settingsProvider.loading||userProvider.loading,
+          home: Selector4<SettingsProvider, UserProvider, PaymentProvider, DebtProvider, bool>(
+            selector: (context, settingsProvider, userProvider, paymentProvider, debtProvider) => settingsProvider.loading||userProvider.loading||paymentProvider.loading||debtProvider.loading,
             builder: (context, loading, _) => loading ? 
               Scaffold(
                 body: Center(

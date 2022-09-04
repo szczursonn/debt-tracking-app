@@ -1,14 +1,16 @@
 import 'package:debt_tracking_app/database_helper.dart';
+import 'package:debt_tracking_app/providers/payment_provider.dart';
 import 'package:debt_tracking_app/utils.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../models.dart';
 
 class PaymentCreatePage extends StatefulWidget {
-  const PaymentCreatePage({Key? key, required this.userId, this.editedPayment}) : super(key: key);
+  const PaymentCreatePage({Key? key, required this.userId, this.editedPaymentId}) : super(key: key);
 
   final int userId;
-  final Payment? editedPayment;
+  final int? editedPaymentId;
 
   @override
   State<PaymentCreatePage> createState() => _PaymentCreatePageState();
@@ -17,40 +19,40 @@ class PaymentCreatePage extends StatefulWidget {
 class _PaymentCreatePageState extends State<PaymentCreatePage> {
 
   final _formKey = GlobalKey<FormState>();
+  final TextEditingController _descriptionTextController = TextEditingController(text: '');
   final TextEditingController _amountTextController = TextEditingController(text: '0');
   final TextEditingController _dateTextController = TextEditingController(text: '');
   
   bool _saving = false;
-  String _description = '';
   DateTime _date = DateTime.now();
 
   void onSubmitClick() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _saving = true);
 
-      late Payment payment;
+      var description = (_descriptionTextController.text.isEmpty) ? null : _descriptionTextController.text;
+      var provider = Provider.of<PaymentProvider>(context, listen: false);
 
-      if (widget.editedPayment == null) {
-        payment = await DatabaseHelper.instance.createPayment(
+      if (widget.editedPaymentId == null) {
+        await provider.createPayment(
           userId: widget.userId, 
           amount: double.parse(_amountTextController.text).round()*100,
           date: _date, 
-          description: (_description.isEmpty) ? null : _description
+          description: description
         );
       } else {
-        Payment p = Payment(
-          id: widget.editedPayment!.id,
+        await provider.updatePayment(Payment(
+          id: widget.editedPaymentId!,
           userId: widget.userId,
           amount: double.parse(_amountTextController.text).round()*100,
           date: _date, 
-          description: (_description.isEmpty) ? null : _description
-        );
-        payment = await DatabaseHelper.instance.updatePayment(p);
+          description: description
+        ));
       }
 
       if (!mounted) return;
       setState(() => _saving = false);
-      Navigator.pop(context, payment);
+      Navigator.pop(context);
     }
   }
 
@@ -67,11 +69,15 @@ class _PaymentCreatePageState extends State<PaymentCreatePage> {
   @override
   void initState() {
     super.initState();
-    if (widget.editedPayment != null) {
-      _date = widget.editedPayment!.date;
-      _amountTextController.text = (widget.editedPayment!.amount/100).toStringAsFixed(2);
-      if (widget.editedPayment!.description != null) {
-        _description = widget.editedPayment!.description!;
+    
+    if (widget.editedPaymentId != null) {
+      var payment = Provider.of<PaymentProvider>(context, listen: false).getPayment(widget.userId, widget.editedPaymentId!);
+        if (payment != null) {
+          _date = payment.date;
+          _amountTextController.text = (payment.amount/100).toStringAsFixed(2);
+        if (payment.description != null) {
+          _descriptionTextController.text = payment.description!;
+        }
       }
     }
     _dateTextController.text = Utils.formatDate(_date);
@@ -82,6 +88,7 @@ class _PaymentCreatePageState extends State<PaymentCreatePage> {
     super.dispose();
     _amountTextController.dispose();
     _dateTextController.dispose();
+    _descriptionTextController.dispose();
   }
 
   @override
@@ -94,7 +101,7 @@ class _PaymentCreatePageState extends State<PaymentCreatePage> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text(widget.editedPayment == null ? 'Register payment' : 'Edit payment'),
+          title: Text(widget.editedPaymentId == null ? 'Register payment' : 'Edit payment'),
         ),
         body: Container(
           margin: const EdgeInsets.all(24),
@@ -127,10 +134,7 @@ class _PaymentCreatePageState extends State<PaymentCreatePage> {
                     border: UnderlineInputBorder()
                   ),
                   readOnly: _saving,
-                  initialValue: widget.editedPayment?.description,
-                  onChanged: (String? value) {
-                    if (value != null) setState(() => _description = value);
-                  },
+                  controller: _descriptionTextController,
                 ),
                 TextFormField(
                   controller: _dateTextController,
@@ -148,7 +152,7 @@ class _PaymentCreatePageState extends State<PaymentCreatePage> {
                     padding: const EdgeInsets.symmetric(vertical: 16.0),
                     child: ElevatedButton(
                       onPressed: _saving ? null : onSubmitClick,
-                      child: Text(widget.editedPayment == null ? 'Create' : 'Edit'),
+                      child: Text(widget.editedPaymentId == null ? 'Create' : 'Edit'),
                     ),
                   ),
                 ),

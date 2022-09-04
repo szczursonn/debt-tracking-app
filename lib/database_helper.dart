@@ -73,7 +73,7 @@ class DatabaseHelper {
   Future<List<User>> fetchAllUsers() async {
     Database db = await instance.database;
     List<Map<String, dynamic>> results = await db.query(_usersTable, orderBy: 'name');
-    await Future.delayed(const Duration(seconds: 1));
+    if (kDebugMode) Future.delayed(const Duration(seconds: 1));
     return results.map((e) => User.fromMap(e)).toList();
   }
 
@@ -81,6 +81,13 @@ class DatabaseHelper {
     Database db = await instance.database;
     await db.insert(_usersTable, user.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
     return user;
+  }
+
+  Future<List<Payment>> fetchAllPayments() async {
+    Database db = await instance.database;
+    var res = await db.query(_paymentsTable);
+    if (kDebugMode) Future.delayed(const Duration(seconds: 1));
+    return res.map((e) => Payment.fromMap(e)).toList();
   }
 
   Future<Payment> updatePayment(Payment payment) async {
@@ -95,6 +102,21 @@ class DatabaseHelper {
     int id = await db.insert(_usersTable, {'name': name, 'avatar': avatar});
     return User(id: id, name: name, avatar: avatar);
   }
+
+  Future<List<Debtor>> fetchAllDebtors() async {
+    Database db = await instance.database;
+    var res = await db.query(_debtorsTable);
+    return res.map((e) => Debtor.fromMap(e)).toList();
+  }
+
+  Future<List<Debt>> fetchAllDebts() async {
+    Database db = await instance.database;
+    if (kDebugMode) await Future.delayed(const Duration(seconds: 1));
+    var res = await db.query(_debtsTable, orderBy: 'date ASC, id DESC');
+    return res.map((e) => Debt.fromMap(e)).toList();
+  }
+
+  /*
 
   Future<UserBalance> fetchUserBalance(int userId) async {
     Database db = await instance.database;
@@ -149,13 +171,6 @@ class DatabaseHelper {
       return debtorUsers;
   }
 
-  Future<List<Debt>> fetchAllDebts() async {
-    Database db = await instance.database;
-    if (kDebugMode) await Future.delayed(const Duration(seconds: 1));
-    var res = await db.query(_debtsTable, orderBy: 'date ASC, id DESC');
-    return res.map((e) => Debt.fromMap(e)).toList();
-  }
-
   Future<double> fetchUserDebtTotal({required int userId, required int debtId}) async {
     Database db = await instance.database;
     var res = await db.query(_debtorsTable, where: 'userId = ? AND debtId = ?', whereArgs: [userId, debtId]);
@@ -174,6 +189,7 @@ class DatabaseHelper {
     int totalInt = res[0]['total'] as dynamic;
     return totalInt/100;
   }
+  */
 
   Future<Debt> createDebt({required String title, String? description, required DateTime date, required Map<int, double> userAmounts}) async {
     Database db = await instance.database;

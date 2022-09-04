@@ -13,3 +13,13 @@ class UserBalance {
 
   UserBalance({required this.owed, required this.paid});
 }
+
+enum HistoryListItemType {debt, payment}
+
+class HistoryListItem {
+  HistoryListItem({required this.id, required this.date, required this.type});
+
+  int id;
+  DateTime date;
+  HistoryListItemType type;
+}
