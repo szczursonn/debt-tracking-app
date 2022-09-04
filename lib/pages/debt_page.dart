@@ -1,3 +1,4 @@
+import 'package:debt_tracking_app/pages/debt_create_page.dart';
 import 'package:debt_tracking_app/pages/user_page.dart';
 import 'package:debt_tracking_app/providers/debt_provider.dart';
 import 'package:debt_tracking_app/providers/settings_provider.dart';
@@ -53,10 +54,6 @@ class _DebtPageState extends State<DebtPage> {
     ));
   }
 
-  void onEditClick() async {
-    throw UnimplementedError();
-  }
-
   Widget buildDebtorList(List<Debtor> debtors) => ListView.builder(itemCount: debtors.length, itemBuilder: (builder, i) {
     var debtor = debtors[i];
     return Selector<UserProvider, User>(
@@ -98,7 +95,7 @@ class _DebtPageState extends State<DebtPage> {
                 onSelected: (_Menu item) {
                     switch (item) {
                       case _Menu.edit:
-                        // Navigator.push(context, MaterialPageRoute(builder: (context) => PaymentCreatePage(userId: widget.userId, editedPaymentId: widget.paymentId)));
+                        Navigator.push(context, MaterialPageRoute(builder: (context) => DebtCreatePage(editedDebtId: widget.debtId)));
                         break;
                       case _Menu.remove:
                         _openRemoveDialog();

@@ -131,6 +131,23 @@ class DatabaseHelper {
     });
   }
 
+  Future<Debt> updateDebt(Debt debt, Map<int, int> userAmounts) async {
+    Database db = await instance.database;
+    if (kDebugMode) await Future.delayed(const Duration(seconds: 1));
+    await db.transaction((txn) async {
+      await txn.insert(_debtsTable, debt.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+      await txn.delete(_debtorsTable, where: 'debtId = ?', whereArgs: [debt.id]);
+      for (var e in userAmounts.entries) {
+        await txn.insert(_debtorsTable, {
+          'debtId': debt.id,
+          'userId': e.key,
+          'amount': e.value
+        });
+      }
+    });
+    return debt;
+  }
+
   /*
 
   Future<UserBalance> fetchUserBalance(int userId) async {
@@ -206,7 +223,7 @@ class DatabaseHelper {
   }
   */
 
-  Future<Debt> createDebt({required String title, String? description, required DateTime date, required Map<int, double> userAmounts}) async {
+  Future<Debt> createDebt({required String title, String? description, required DateTime date, required Map<int, int> userAmounts}) async {
     Database db = await instance.database;
 
     if (kDebugMode) Future.delayed(const Duration(seconds: 3));
@@ -222,7 +239,7 @@ class DatabaseHelper {
         await txn.insert(_debtorsTable, {
           'debtId': debtId,
           'userId': e.key,
-          'amount': (e.value*100).round()
+          'amount': e.value
         });
       }
 

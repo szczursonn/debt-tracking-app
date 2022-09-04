@@ -19,13 +19,13 @@ class DebtProvider extends ChangeNotifier {
 
   Debtor getDebtor({required int userId, required int debtId}) => _debtorsByDebtId[debtId]!.where((e)=>e.userId==userId).first;
 
-  List<Debtor> getDebtDebtors(int debtId) => _debtorsByDebtId[debtId]!;
+  List<Debtor> getDebtDebtors(int debtId) => _debtorsByDebtId[debtId] ?? [];
 
-  int getUserTotalOwedAmount(int userId) => Utils.sumDebtors(_debtorsByUserId[userId]?? []);
+  int getUserTotalOwedAmount(int userId) => Utils.sumDebtors(_debtorsByUserId[userId] ?? []);
 
   Debt? getDebt(int debtId) => _debtsById[debtId];
 
-  Future<void> createDebt({required String title, String? description, required Map<int, double> userAmounts, required DateTime date}) async {
+  Future<void> createDebt({required String title, String? description, required Map<int, int> userAmounts, required DateTime date}) async {
     Debt debt = await DatabaseHelper.instance.createDebt(
       title: title,
       description: description,
@@ -43,8 +43,21 @@ class DebtProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> updateDebt(Debt debt, Map<int, double> userAmounts) async {
-    throw UnimplementedError();
+  Future<void> updateDebt(Debt debt, Map<int, int> userAmounts) async {
+    await DatabaseHelper.instance.updateDebt(debt, userAmounts);
+    _debtsById[debt.id] = debt;
+    var oldDebtorsIds = _debtorsByDebtId[debt.id]?.map((e) => e.userId).toList() ?? [];
+
+    var newDebtors = userAmounts.entries.map((e) => Debtor(userId: e.key, debtId: debt.id, amount: e.value)).toList();
+    _debtorsByDebtId[debt.id] = newDebtors;
+
+    for (var userId in oldDebtorsIds) {
+      _debtorsByUserId[userId]?.removeWhere((e) => e.debtId == debt.id);
+    }
+    for (var debtor in newDebtors) {
+      if (_debtorsByUserId[debtor.userId] == null) _debtorsByUserId[debtor.userId] = [];
+      _debtorsByUserId[debtor.userId]!.add(debtor);
+    }
 
     notifyListeners();
   }

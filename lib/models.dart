@@ -35,7 +35,7 @@ class Debt {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'title': description,
+      'title': title,
       'description': description,
       'date': date.toIso8601String()
     };

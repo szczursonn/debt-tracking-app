@@ -10,9 +10,10 @@ import '../models.dart';
 import '../providers/settings_provider.dart';
 
 class DebtCreatePage extends StatefulWidget {
-  const DebtCreatePage({Key? key, this.initialUserId}) : super(key: key);
+  const DebtCreatePage({Key? key, this.initialUserId, this.editedDebtId}) : super(key: key);
 
   final int? initialUserId;
+  final int? editedDebtId;
 
   @override
   State<DebtCreatePage> createState() => _DebtCreatePageState();
@@ -39,13 +40,26 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
       setState(() => _isSaving = true);
 
       var provider = Provider.of<DebtProvider>(context, listen: false);
+      var userAmounts = _usersTextControllers.map((key, value) => MapEntry(key, (double.parse(value.text.replaceAll(',', '.'))*100).round()));
 
-      await provider.createDebt(
-        title: _titleTextController.text,
-        description: _descriptionTextController.text.isEmpty ? null : _descriptionTextController.text,
-        date: _date,
-        userAmounts: _usersTextControllers.map((key, value) => MapEntry(key, double.parse(value.text.replaceAll(',', '.'))))
-      );
+      if (widget.editedDebtId == null) {
+        await provider.createDebt(
+          title: _titleTextController.text,
+          description: _descriptionTextController.text.isEmpty ? null : _descriptionTextController.text,
+          date: _date,
+          userAmounts: userAmounts
+        );
+      } else {
+        await provider.updateDebt(
+          Debt(
+            id: widget.editedDebtId!,
+            title: _titleTextController.text,
+            description: _descriptionTextController.text.isEmpty ? null : _descriptionTextController.text,
+            date: _date
+          ),
+          userAmounts
+        );
+      }
       if (!mounted) return;
 
       setState(() => _isSaving = false);
@@ -153,7 +167,25 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
     });
     _dateTextController.text = Utils.formatDate(_date);
 
-    if (widget.initialUserId != null) {
+    if (widget.editedDebtId != null) {
+      var provider = Provider.of<DebtProvider>(context, listen: false);
+      var debt = provider.getDebt(widget.editedDebtId!);
+      if (debt != null) {
+        var debtors = provider.getDebtDebtors(debt.id);
+        setState(() {
+          _isAutoDistribute = false;
+          _titleTextController.text = debt.title;
+          if (debt.description != null) _descriptionTextController.text = debt.description!;
+          _amountTextController.text = Utils.sumDebtors(debtors).toStringAsFixed(2);
+          _dateTextController.text = Utils.formatDate(debt.date);
+          _userIds = debtors.map((e) => e.userId).toList();
+          setupUserTextControllers();
+          for (var debtor in debtors) {
+            _usersTextControllers[debtor.userId]?.text=(debtor.amount/100).toStringAsFixed(2);
+          }
+        });
+      }
+    } else if (widget.initialUserId != null) {
       setState(() {
         _userIds.add(widget.initialUserId!);
         setupUserTextControllers();
@@ -244,7 +276,7 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
       onWillPop: onPop,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Record debt'),
+          title: Text(widget.editedDebtId == null ? 'Record debt' : 'Edit debt'),
         ),
         body: Container(
           margin: const EdgeInsets.only(
@@ -343,7 +375,7 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
                     padding: const EdgeInsets.symmetric(vertical: 16.0),
                     child: ElevatedButton(
                       onPressed: (_isSaving || _userIds.isEmpty) ? null : onSubmitClick,
-                      child: const Text('Create'),
+                      child: Text(widget.editedDebtId == null ? 'Create' : 'Edit'),
                     ),
                   ),
                 ),
