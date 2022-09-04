@@ -49,6 +49,21 @@ class DebtProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> removeDebt(int debtId) async {
+    await DatabaseHelper.instance.removeDebt(debtId);
+
+    _debtsById.remove(debtId);
+    
+    var userIds = _debtorsByDebtId[debtId]?.map((e) => e.userId).toList() ?? [];
+    for (var userId in userIds) {
+      _debtorsByUserId[userId]?.removeWhere((e) => e.debtId==debtId);
+    }
+
+    _debtorsByDebtId.remove(debtId);
+
+    notifyListeners();
+  }
+
   Future<void> load() async {
     _loading = true;
     notifyListeners();

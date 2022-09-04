@@ -116,6 +116,21 @@ class DatabaseHelper {
     return res.map((e) => Debt.fromMap(e)).toList();
   }
 
+  Future<void> removePayment(int paymentId) async {
+    Database db = await instance.database;
+    if (kDebugMode) await Future.delayed(const Duration(seconds: 1));
+    await db.delete(_paymentsTable, where: 'id = ?', whereArgs: [paymentId]);
+  }
+
+  Future<void> removeDebt(int debtId) async {
+    Database db = await instance.database;
+    if (kDebugMode) await Future.delayed(const Duration(seconds: 1));
+    await db.transaction((txn) async {
+      await txn.delete(_debtorsTable, where: 'debtId = ?', whereArgs: [debtId]);
+      await txn.delete(_debtsTable, where: 'id = ?', whereArgs: [debtId]);
+    });
+  }
+
   /*
 
   Future<UserBalance> fetchUserBalance(int userId) async {

@@ -1,4 +1,3 @@
-import 'package:debt_tracking_app/database_helper.dart';
 import 'package:debt_tracking_app/pages/users_selector_page.dart';
 import 'package:debt_tracking_app/providers/debt_provider.dart';
 import 'package:debt_tracking_app/providers/user_provider.dart';
@@ -25,13 +24,13 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
 
   List<int> _userIds = [];
   Map<int,TextEditingController> _usersTextControllers = {};
+  final TextEditingController _titleTextController = TextEditingController(text: '');
+  final TextEditingController _descriptionTextController = TextEditingController(text: '');
   final TextEditingController _amountTextController = TextEditingController(text: '0');
   final TextEditingController _dateTextController = TextEditingController(text: '');
 
   bool _isSaving = false;
   bool _isAutoDistribute = true;
-  String _title = '';
-  String? _description;
   DateTime _date = DateTime.now();
   double _autoDistributeError = 0;
 
@@ -42,10 +41,10 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
       var provider = Provider.of<DebtProvider>(context, listen: false);
 
       await provider.createDebt(
-        title: _title,
-        description: _description,
+        title: _titleTextController.text,
+        description: _descriptionTextController.text.isEmpty ? null : _descriptionTextController.text,
         date: _date,
-        userAmounts: _usersTextControllers.map((key, value) => MapEntry(key, double.parse(value.text)))
+        userAmounts: _usersTextControllers.map((key, value) => MapEntry(key, double.parse(value.text.replaceAll(',', '.'))))
       );
       if (!mounted) return;
 
@@ -165,6 +164,8 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
   @override
   void dispose() {
     super.dispose();
+    _titleTextController.dispose();
+    _descriptionTextController.dispose();
     _amountTextController.dispose();
     _dateTextController.dispose();
     disposeUserTextControllers();
@@ -263,9 +264,7 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
                     hintText: 'Debt title',
                     border: UnderlineInputBorder()
                   ),
-                  onChanged: (String? value) {
-                    if (value != null) setState(() => _title = value);
-                  },
+                  controller: _titleTextController,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Title cannot be empty';
@@ -282,9 +281,7 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
                     border: UnderlineInputBorder()
                   ),
                   maxLines: null,
-                  onChanged: (String? value) {
-                    setState(() => _description = value);
-                  },
+                  controller: _descriptionTextController,
                 ),
                 // DATE
                 TextFormField(

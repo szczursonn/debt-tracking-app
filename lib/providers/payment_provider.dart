@@ -32,6 +32,13 @@ class PaymentProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> removePayment({required int userId, required int paymentId}) async {
+    await DatabaseHelper.instance.removePayment(paymentId);
+    _paymentsByUserId[userId]?.remove(paymentId);
+
+    notifyListeners();
+  }
+
   Future<void> load() async {
     _loading = true;
     notifyListeners();

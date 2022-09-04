@@ -1,4 +1,3 @@
-import 'package:debt_tracking_app/database_helper.dart';
 import 'package:debt_tracking_app/providers/payment_provider.dart';
 import 'package:debt_tracking_app/utils.dart';
 import 'package:flutter/material.dart';
