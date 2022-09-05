@@ -108,7 +108,9 @@ class _UserPageState extends State<UserPage> {
                 ListTile(
                   title: Text(
                     debt.title,
-                    style: const TextStyle(fontWeight: FontWeight.bold)
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 3
                   ),
                   subtitle: debt.description == null ? null : Text(debt.description!, overflow: TextOverflow.ellipsis, maxLines: 2),
                   leading: const DebtIcon(),
@@ -192,7 +194,9 @@ class _UserPageState extends State<UserPage> {
               )
             ],
           ),
-          body: user == null ? Text('Error: no user with id ${widget.userId}', style: TextStyle(color: Theme.of(context).errorColor))  : SingleChildScrollView(
+          body: user == null
+          ? Text('Error: no user with id ${widget.userId}', style: TextStyle(color: Theme.of(context).errorColor))
+          : SingleChildScrollView(
             child: Container(
               margin: const EdgeInsets.all(12),
               child: Column(

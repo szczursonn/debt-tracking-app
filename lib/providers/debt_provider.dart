@@ -33,7 +33,7 @@ class DebtProvider extends ChangeNotifier {
       date: date
     );
     _debtsById[debt.id] = debt;
-    var debtors = userAmounts.entries.map((e)=>Debtor(debtId: debt.id, userId: e.key, amount: (e.value*100).round())).toList();
+    var debtors = userAmounts.entries.map((e)=>Debtor(debtId: debt.id, userId: e.key, amount: e.value)).toList();
     _debtorsByDebtId[debt.id] = debtors;
     for (var debtor in debtors) {
       if (_debtorsByUserId[debtor.userId] == null) _debtorsByUserId[debtor.userId] = [];

@@ -1,4 +1,3 @@
-import 'package:debt_tracking_app/models.dart';
 import 'package:debt_tracking_app/pages/debts_page.dart';
 import 'package:debt_tracking_app/pages/settings_page.dart';
 import 'package:debt_tracking_app/pages/statistics_page.dart';

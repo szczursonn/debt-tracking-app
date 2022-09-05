@@ -79,7 +79,12 @@ class _DebtsPageState extends State<DebtsPage> {
                           leading: const DebtIcon(),
                         )
                         : ListTile(
-                          title: Text(debt.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          title: Text(
+                            debt.title,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 3
+                          ),
                           subtitle: debt.description == null ? null : Text(debt.description!, overflow: TextOverflow.ellipsis, maxLines: 2),
                           leading: const DebtIcon(),
                           trailing: Selector<DebtProvider, int>(

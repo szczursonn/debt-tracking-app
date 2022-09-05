@@ -134,6 +134,7 @@ class _PaymentCreatePageState extends State<PaymentCreatePage> {
                   ),
                   readOnly: _saving,
                   controller: _descriptionTextController,
+                  maxLines: null,
                 ),
                 TextFormField(
                   controller: _dateTextController,

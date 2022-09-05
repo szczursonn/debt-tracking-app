@@ -38,7 +38,7 @@ class _PaymentPageState extends State<PaymentPage> {
   Future<void> _openRemoveDialog() {
     return showDialog(context: context, builder: (context) => AreYouSureDialog(
       title: 'Are you sure?',
-      content: const Text('Are you sure you want to delete this user?'),
+      content: const Text('Are you sure you want to delete this payment?'),
       onYes: _removePayment
     ));
   }
