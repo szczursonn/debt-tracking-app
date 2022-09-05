@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:debt_tracking_app/providers/user_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
@@ -20,6 +21,7 @@ class _UserCreatePageState extends State<UserCreatePage> {
 
   final _formKey = GlobalKey<FormState>();
   final _picker = ImagePicker();
+  bool _lacksCameraPermissions = false;
 
   final TextEditingController _nameTextController = TextEditingController(text: '');
 
@@ -27,15 +29,25 @@ class _UserCreatePageState extends State<UserCreatePage> {
   Uint8List? _avatar;
 
   Future pickImage(ImageSource source) async {
-    XFile? file = await _picker.pickImage(source: source, imageQuality: 20, maxHeight: 256, maxWidth: 256);
-    if (file == null) return;
-    var avatar = await file.readAsBytes();
+    try {
+      XFile? file = await _picker.pickImage(source: source, imageQuality: 20, maxHeight: 256, maxWidth: 256);
+      if (file == null) return;
+      var avatar = await file.readAsBytes();
 
-    if (!mounted) return;
-    Navigator.pop(context);
-    setState(() {
-      _avatar = avatar;
-    });
+      if (!mounted) return;
+      Navigator.pop(context);
+      setState(() {
+        _avatar = avatar;
+        _lacksCameraPermissions = false;
+      });
+    } catch (err) {
+      if (err is PlatformException && err.code == 'camera_access_denied') {
+        setState(() {
+          _lacksCameraPermissions = true;
+        });
+      }
+    }
+    
   }
 
   void onSubmitClick() async {
@@ -146,6 +158,10 @@ class _UserCreatePageState extends State<UserCreatePage> {
                     radius: 64,
                   ),
                 ),
+                _lacksCameraPermissions ? Container(
+                  margin: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text('Camera permission denied', style: TextStyle(color: Theme.of(context).errorColor, fontWeight: FontWeight.bold)),
+                ) : Container(),
                 TextFormField(
                   controller: _nameTextController,
                   decoration: const InputDecoration(

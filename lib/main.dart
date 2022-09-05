@@ -101,11 +101,11 @@ class MyApp extends StatelessWidget {
                     actions: const [
                       SettingsButton()
                     ],
-                    bottom: const TabBar(
+                    bottom: TabBar(
                       tabs: [
-                        Tab(icon: Icon(Icons.person)),
-                        Tab(icon: Icon(Icons.euro)),
-                        Tab(icon: Icon(Icons.show_chart))
+                        Tab(icon: Icon(Icons.person, color: (settingsProvider.themeMode == ThemeMode.light && settingsProvider.useMaterial3) ? Colors.black : null)),
+                        Tab(icon: Icon(Icons.euro, color: (settingsProvider.themeMode == ThemeMode.light && settingsProvider.useMaterial3) ? Colors.black : null)),
+                        Tab(icon: Icon(Icons.show_chart, color: (settingsProvider.themeMode == ThemeMode.light && settingsProvider.useMaterial3) ? Colors.black : null))
                       ],
                     ),
                     title: const Text('debt-tracking-app'),
