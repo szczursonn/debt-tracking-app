@@ -69,11 +69,13 @@ class MyApp extends StatelessWidget {
           // Light theme
           theme: ThemeData(
             primarySwatch: Colors.blue,
-            cardColor: Colors.white70
+            cardColor: Colors.white70,
+            useMaterial3: settingsProvider.useMaterial3
           ),
           // Dark theme
           darkTheme: ThemeData(
-            brightness: Brightness.dark
+            brightness: Brightness.dark,
+            useMaterial3: settingsProvider.useMaterial3
           ),
           themeMode: settingsProvider.themeMode,
           home: Selector4<SettingsProvider, UserProvider, PaymentProvider, DebtProvider, bool>(

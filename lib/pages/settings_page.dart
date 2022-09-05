@@ -49,6 +49,12 @@ class _SettingsPageState extends State<SettingsPage> {
       setState(() => _saving = false);
     }
 
+    void onMaterial3SwitchClick(bool value) async {
+      setState(() => _saving = true);
+      await settingsProvider.setUseMaterial3(value);
+      setState(() => _saving = false);
+    }
+
     String getThemeButtonText(ThemeMode tm) {
       switch (tm) {
         case ThemeMode.light:
@@ -104,32 +110,34 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [ThemeMode.system, ThemeMode.light, ThemeMode.dark].map((tm) => 
-                          ElevatedButton(
+                        children: [ThemeMode.system, ThemeMode.light, ThemeMode.dark].map((tm) {
+                          bool isSelected = settingsProvider.themeMode==tm;
+                          return ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              primary: settingsProvider.themeMode==tm ? Theme.of(context).toggleableActiveColor : Theme.of(context).disabledColor
+                              primary: isSelected ? Theme.of(context).toggleableActiveColor : Theme.of(context).disabledColor
                             ),
                             onPressed: _saving ? null : onThemeButtonPress(tm),
-                            child: Text(getThemeButtonText(tm)),
-                          )
-                        ).toList()
+                            child: Text(
+                              getThemeButtonText(tm),
+                              style: TextStyle(color: isSelected ? Colors.black87 : (settingsProvider.useMaterial3 ? Colors.white : null)),
+                            )
+                          );
+                        }).toList()
                       ),
                       const SizedBox(height: 8),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Card(
-                  child: Column(
-                    children: [
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(primary: Theme.of(context).errorColor),
-                        onPressed: () {},
-                        child: const Text('Reset database')
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Switch(
+                            value: settingsProvider.useMaterial3,
+                            onChanged: onMaterial3SwitchClick,
+                          ),
+                          const Text('Use Material Design 3', style: TextStyle(fontWeight: FontWeight.bold))
+                        ],
                       )
                     ],
                   ),
-                )
+                ),
               ],
             )
           ),
