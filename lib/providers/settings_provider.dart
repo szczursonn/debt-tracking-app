@@ -78,6 +78,9 @@ class SettingsProvider extends ChangeNotifier {
         themeMode = ThemeMode.system;
         break;
     }
+    // MATERIAL3
+    bool? useMaterial3 = prefs.getBool(useMaterial3PrefsKey);
+    if (useMaterial3 != null) this.useMaterial3 = useMaterial3;
     // CURRENCY
     String? currency = prefs.getString(currencyPrefsKey);
     if (currency != null) this.currency = currency;
