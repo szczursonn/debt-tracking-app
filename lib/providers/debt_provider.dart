@@ -17,7 +17,7 @@ class DebtProvider extends ChangeNotifier {
 
   List<HistoryListItem> getUserDebtsIdsWithDates(int userId) => _debtorsByUserId[userId]?.map((e) => HistoryListItem(id: e.debtId, date: _debtsById[e.debtId]!.date, type: HistoryListItemType.debt)).toList() ?? [];
 
-  Debtor getDebtor({required int userId, required int debtId}) => _debtorsByDebtId[debtId]!.where((e)=>e.userId==userId).first;
+  Debtor? getDebtor({required int userId, required int debtId}) => _debtorsByDebtId[debtId]?.where((e)=>e.userId==userId).first;
 
   List<Debtor> getDebtDebtors(int debtId) => _debtorsByDebtId[debtId] ?? [];
 

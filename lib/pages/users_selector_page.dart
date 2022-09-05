@@ -108,15 +108,17 @@ class UserListItem extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => Selector<UserProvider, User>(
-    selector: (context, provider) => provider.getUser(userId)!,
+  Widget build(BuildContext context) => Selector<UserProvider, User?>(
+    selector: (context, provider) => provider.getUser(userId),
     builder: (context, user, _) => Card(
       elevation: 2,
       color: isSelected ? Theme.of(context).colorScheme.surfaceTint : null,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          ListTile(
+          user == null
+          ? Container()
+          : ListTile(
             leading: UserAvatar(user: user),
             title: Text(
               user.name,

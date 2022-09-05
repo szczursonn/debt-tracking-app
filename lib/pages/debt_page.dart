@@ -31,10 +31,14 @@ class _DebtPageState extends State<DebtPage> {
     setState(() => _removing=true);
 
     var provider = Provider.of<DebtProvider>(context, listen: false);
-    await provider.removeDebt(widget.debtId);
-    if (!mounted) return;
+    try {
+      await provider.removeDebt(widget.debtId);
+      if (!mounted) return;
 
-    Navigator.pop(context);
+      Navigator.pop(context);
+    } catch (err) {
+      setState(() => _removing=false);
+    }
   }
 
   Future<void> _openRemoveDialog() {
@@ -91,7 +95,7 @@ class _DebtPageState extends State<DebtPage> {
             title: Text(debt?.title ?? 'invalid debtId'),
             actions: [
               PopupMenuButton(
-                enabled: !_removing,
+                enabled: (!_removing && debt != null),
                 onSelected: (_Menu item) {
                     switch (item) {
                       case _Menu.edit:
@@ -127,7 +131,7 @@ class _DebtPageState extends State<DebtPage> {
               )
             ],
           ),
-          body: debt == null ? null : Container(
+          body: debt == null ? Text('Error: no debt with id ${widget.debtId}', style: TextStyle(color: Theme.of(context).errorColor)) : Container(
             margin: const EdgeInsets.all(12),
             child: Center(
               child: Column(

@@ -58,7 +58,7 @@ class _PaymentPageState extends State<PaymentPage> {
             title: const Text('Payment'),
             actions: [
               PopupMenuButton(
-                enabled: !_removing,
+                enabled: (!_removing && payment != null),
                 onSelected: (_Menu item) {
                     switch (item) {
                       case _Menu.edit:
@@ -94,7 +94,7 @@ class _PaymentPageState extends State<PaymentPage> {
               )
             ],
           ),
-          body: payment == null ? null : Container(
+          body: payment == null ? Text('Error: no payment with id ${widget.paymentId} on user id ${widget.userId}', style: TextStyle(color: Theme.of(context).errorColor)) : Container(
             margin: const EdgeInsets.all(12),
             child: Center(
               child: Column(

@@ -1,4 +1,3 @@
-import 'package:debt_tracking_app/database_helper.dart';
 import 'package:debt_tracking_app/pages/debt_create_page.dart';
 import 'package:debt_tracking_app/pages/debt_page.dart';
 import 'package:debt_tracking_app/pages/payment_create_page.dart';
@@ -27,11 +26,9 @@ class UserPage extends StatefulWidget {
   State<UserPage> createState() => _UserPageState();
 }
 
-class _UserPageState extends State<UserPage> {
+enum _Menu {edit, remove}
 
-  void onEditClick() async {
-    await Navigator.push(context, MaterialPageRoute(builder: (context) => UserCreatePage(editedUserId: widget.userId)));
-  }
+class _UserPageState extends State<UserPage> {
 
   void onAddDebtClick() async {
     await Navigator.push(context, MaterialPageRoute(builder: (context) => DebtCreatePage(initialUserId: widget.userId)));
@@ -102,9 +99,9 @@ class _UserPageState extends State<UserPage> {
 
     switch (item.type) {
       case HistoryListItemType.debt:
-        return Selector<DebtProvider, Debt>(
-          selector: (context, provider) => provider.getDebt(item.id)!,
-          builder: (context, debt, _) => InkWell(
+        return Selector<DebtProvider, Debt?>(
+          selector: (context, provider) => provider.getDebt(item.id),
+          builder: (context, debt, _) => debt == null ? Container() : InkWell(
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => DebtPage(debtId: debt.id))),
             child: Column(
               children: [
@@ -115,9 +112,11 @@ class _UserPageState extends State<UserPage> {
                   ),
                   subtitle: debt.description == null ? null : Text(debt.description!, overflow: TextOverflow.ellipsis, maxLines: 2),
                   leading: const DebtIcon(),
-                  trailing: Selector<DebtProvider, Debtor>(
-                    selector: (context, provider) => provider.getDebtor(userId: widget.userId, debtId: item.id),
-                    builder: (context, debtor, _) => Text('-${(debtor.amount/100).toStringAsFixed(2)} $currency', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.red))
+                  trailing: Selector<DebtProvider, int?>(
+                    selector: (context, provider) => provider.getDebtor(userId: widget.userId, debtId: item.id)?.amount,
+                    builder: (context, amount, _) => amount == null
+                    ? Text('err', style: TextStyle(color: Theme.of(context).errorColor))
+                    : Text('-${(amount/100).toStringAsFixed(2)} $currency', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.red))
                   ),
                 ),
               ],
@@ -125,9 +124,9 @@ class _UserPageState extends State<UserPage> {
           ),
         );
       case HistoryListItemType.payment:
-        return Selector<PaymentProvider, Payment>(
-          selector: (context, provider) => provider.getPayment(widget.userId, item.id)!,
-          builder: (context, payment, _) => InkWell(
+        return Selector<PaymentProvider, Payment?>(
+          selector: (context, provider) => provider.getPayment(widget.userId, item.id),
+          builder: (context, payment, _) => payment == null ? Container() : InkWell(
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => PaymentPage(userId: widget.userId, paymentId: item.id))),
             child: Column(
               children: [
@@ -149,20 +148,51 @@ class _UserPageState extends State<UserPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Selector<UserProvider, User>(
-      selector: (context, provider) => provider.getUser(widget.userId)!,
+    return Selector<UserProvider, User?>(
+      selector: (context, provider) => provider.getUser(widget.userId),
       builder: (context, user, _) {
         return Scaffold(
           appBar: AppBar(
-            title: Text(user.name),
+            title: Text(user == null ? 'invalid user' : user.name),
             actions: [
-              IconButton(
-                onPressed: onEditClick, 
-                icon: const Icon(Icons.edit)
+              PopupMenuButton(
+                enabled: user != null,
+                onSelected: (_Menu item) {
+                  switch (item) {
+                    case _Menu.edit:
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => UserCreatePage(editedUserId: widget.userId)));
+                      break;
+                    case _Menu.remove:
+                      break;
+                  }
+                },
+                itemBuilder: (context) => <PopupMenuEntry<_Menu>>[
+                  PopupMenuItem(
+                    value: _Menu.edit,
+                    child: Row(
+                      children: const [
+                        Icon(Icons.edit),
+                        SizedBox(width: 8),
+                        Text('Edit')
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    enabled: false,
+                    value: _Menu.remove,
+                    child: Row(
+                      children: const [
+                        Icon(Icons.delete),
+                        SizedBox(width: 8),
+                        Text('Remove')
+                      ],
+                    ),
+                  )
+                ],
               )
             ],
           ),
-          body: SingleChildScrollView(
+          body: user == null ? Text('Error: no user with id ${widget.userId}', style: TextStyle(color: Theme.of(context).errorColor))  : SingleChildScrollView(
             child: Container(
               margin: const EdgeInsets.all(12),
               child: Column(

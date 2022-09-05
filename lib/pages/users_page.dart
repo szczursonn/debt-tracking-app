@@ -1,5 +1,3 @@
-import 'package:debt_tracking_app/database_helper.dart';
-import 'package:debt_tracking_app/helper_models.dart';
 import 'package:debt_tracking_app/pages/user_create_page.dart';
 import 'package:debt_tracking_app/pages/user_page.dart';
 import 'package:debt_tracking_app/providers/debt_provider.dart';
@@ -79,14 +77,16 @@ class UserListItem extends StatelessWidget {
   };
 
   @override
-  Widget build(BuildContext context) => Selector<UserProvider, User>(
-    selector: (context, provider) => provider.getUser(userId)!,
+  Widget build(BuildContext context) => Selector<UserProvider, User?>(
+    selector: (context, provider) => provider.getUser(userId),
     builder: (context, user, _) => Card(
       elevation: 2,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          ListTile(
+          user == null
+          ? Container()
+          : ListTile(
             leading: UserAvatar(user: user),
             title: Text(
               user.name,

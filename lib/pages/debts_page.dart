@@ -1,4 +1,3 @@
-import 'package:debt_tracking_app/database_helper.dart';
 import 'package:debt_tracking_app/helper_models.dart';
 import 'package:debt_tracking_app/pages/debt_page.dart';
 import 'package:debt_tracking_app/providers/debt_provider.dart';
@@ -68,15 +67,18 @@ class _DebtsPageState extends State<DebtsPage> {
               ),
               const Divider(thickness: 3),
               Column(
-                children: groupItems.map((item) => Selector<DebtProvider, Debt>(
-                  selector: (context, provider) => provider.getDebt(item.id)!,
+                children: groupItems.map((item) => Selector<DebtProvider, Debt?>(
+                  selector: (context, provider) => provider.getDebt(item.id),
                   builder: (context, debt, _) => InkWell(
-                    onTap: () async {
-                      await Navigator.push(context, MaterialPageRoute(builder: (context) => DebtPage(debtId: debt.id)));
-                    },
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => DebtPage(debtId: item.id))),
                     child: Column(
                       children: [
-                        ListTile(
+                        debt == null
+                        ? ListTile(
+                          title: Text('error: no debt with id ${item.id}', style: TextStyle(color: Theme.of(context).errorColor)),
+                          leading: const DebtIcon(),
+                        )
+                        : ListTile(
                           title: Text(debt.title, style: const TextStyle(fontWeight: FontWeight.bold)),
                           subtitle: debt.description == null ? null : Text(debt.description!, overflow: TextOverflow.ellipsis, maxLines: 2),
                           leading: const DebtIcon(),

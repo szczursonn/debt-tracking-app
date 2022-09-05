@@ -1,6 +1,5 @@
 import 'dart:typed_data';
 
-import 'package:debt_tracking_app/database_helper.dart';
 import 'package:debt_tracking_app/providers/user_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -141,7 +140,7 @@ class _UserCreatePageState extends State<UserCreatePage> {
                   child: _avatar == null ? const CircleAvatar(
                     backgroundColor: Colors.amber,
                     radius: 64,
-                    child: Icon(Icons.add_a_photo)
+                    child: Icon(Icons.add_a_photo, size: 32)
                   ) : CircleAvatar(
                     backgroundImage: MemoryImage(_avatar!),
                     radius: 64,
