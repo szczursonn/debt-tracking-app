@@ -23,6 +23,8 @@ class DebtProvider extends ChangeNotifier {
 
   int getUserTotalOwedAmount(int userId) => Utils.sumDebtors(_debtorsByUserId[userId] ?? []);
 
+  int getTotalOwedAmount() => Utils.sumDebtors(_debtsById.keys.map((e) => _debtorsByDebtId[e]!).expand((e) => e));
+
   Debt? getDebt(int debtId) => _debtsById[debtId];
 
   Future<void> createDebt({required String title, String? description, required Map<int, int> userAmounts, required DateTime date}) async {
