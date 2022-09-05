@@ -27,6 +27,13 @@ class UserProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> removeUser(int userId) async {
+    await DatabaseHelper.instance.removeUser(userId);
+    _usersById.remove(userId);
+
+    notifyListeners();
+  }
+
   Future<void> load() async {
     _loading = true;
     notifyListeners();

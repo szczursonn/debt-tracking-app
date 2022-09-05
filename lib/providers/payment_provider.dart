@@ -16,6 +16,12 @@ class PaymentProvider extends ChangeNotifier {
 
   Payment? getPayment(int userId, int paymentId) => _paymentsByUserId[userId]?[paymentId];
 
+  void onUserDeleted(int userId) {
+    _paymentsByUserId.remove(userId);
+
+    notifyListeners();
+  }
+
   Future<void> createPayment({required int userId, String? description, required int amount, required DateTime date}) async {
     Payment payment = await DatabaseHelper.instance.createPayment(userId: userId, description: description, amount: amount, date: date);
     if (_paymentsByUserId[userId] == null) _paymentsByUserId[userId] = {};

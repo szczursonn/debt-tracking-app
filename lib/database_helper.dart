@@ -130,6 +130,28 @@ class DatabaseHelper {
     });
   }
 
+  Future<void> removeUser(int userId) async {
+    Database db = await instance.database;
+    if (kDebugMode) await Future.delayed(const Duration(seconds: 1));
+
+    await db.transaction((txn) async {
+
+      // delete debts that would have no debtors after deleting the user
+      var debtIds = (await txn.query(_debtorsTable, where: 'userId = ?', whereArgs: [userId])).map((e) => e['debtId'] as int);
+      for (var debtId in debtIds) {
+        var amountOfDebtors = (await txn.query(_debtorsTable, where: 'debtId = ?', whereArgs: [debtId])).length;
+        if (amountOfDebtors < 2) {
+          await txn.delete(_debtorsTable, where: 'userId = ? AND debtId = ?', whereArgs: [userId, debtId]);
+          await txn.delete(_debtsTable, where: 'id = ?', whereArgs: [debtId]);
+        }
+      }
+
+      await txn.delete(_debtorsTable, where: 'userId = ?', whereArgs: [userId]);
+      await txn.delete(_paymentsTable, where: 'userId = ?', whereArgs: [userId]);
+      await txn.delete(_usersTable, where: 'id = ?', whereArgs: [userId]);
+    });
+  }
+
   Future<Debt> updateDebt(Debt debt, Map<int, int> userAmounts) async {
     Database db = await instance.database;
     if (kDebugMode) await Future.delayed(const Duration(seconds: 1));

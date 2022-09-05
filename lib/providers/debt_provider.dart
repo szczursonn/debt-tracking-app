@@ -27,6 +27,25 @@ class DebtProvider extends ChangeNotifier {
 
   Debt? getDebt(int debtId) => _debtsById[debtId];
 
+  void onUserDeleted(int userId) {
+    
+    // remove debts that would have 0 debtors after removal of user
+    var debtIds = _debtorsByUserId[userId]?.map((e) => e.debtId) ?? [];
+    for (var debtId in debtIds) {
+      if (_debtorsByDebtId[debtId]?.length == 1) {
+        _debtsById.remove(debtId);
+        _debtorsByDebtId.remove(debtId);
+      } 
+    }
+
+    _debtorsByUserId.remove(userId);
+    for (var e in _debtorsByDebtId.entries) {
+      e.value.removeWhere((e)=>e.userId==userId);
+    }
+    
+    notifyListeners();
+  }
+
   Future<void> createDebt({required String title, String? description, required Map<int, int> userAmounts, required DateTime date}) async {
     Debt debt = await DatabaseHelper.instance.createDebt(
       title: title,

@@ -8,9 +8,11 @@ import 'package:debt_tracking_app/providers/payment_provider.dart';
 import 'package:debt_tracking_app/providers/settings_provider.dart';
 import 'package:debt_tracking_app/providers/user_provider.dart';
 import 'package:debt_tracking_app/utils.dart';
+import 'package:debt_tracking_app/widgets/are_you_sure_dialog.dart';
 import 'package:debt_tracking_app/widgets/debt_icon.dart';
 import 'package:debt_tracking_app/widgets/payment_icon.dart';
 import 'package:debt_tracking_app/widgets/user_avatar.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -29,6 +31,8 @@ class UserPage extends StatefulWidget {
 enum _Menu {edit, remove}
 
 class _UserPageState extends State<UserPage> {
+
+  bool _removing = false;
 
   void onAddDebtClick() async {
     await Navigator.push(context, MaterialPageRoute(builder: (context) => DebtCreatePage(initialUserId: widget.userId)));
@@ -148,93 +152,136 @@ class _UserPageState extends State<UserPage> {
     }
   }
 
+  void _removeUser() async {
+    setState(() => _removing=true);
+
+    var userProvider = Provider.of<UserProvider>(context, listen: false);
+    var paymentProvider = Provider.of<PaymentProvider>(context, listen: false);
+    var debtProvider = Provider.of<DebtProvider>(context, listen: false);
+    try {
+      await userProvider.removeUser(widget.userId);
+      paymentProvider.onUserDeleted(widget.userId);
+      debtProvider.onUserDeleted(widget.userId);
+
+      if (!mounted) return;
+      Navigator.pop(context);
+    } catch (err) {
+      if (kDebugMode) print(err);
+      if (!mounted) return;
+      setState(() => _removing=false);
+    }
+  }
+
+  Future<void> _openRemoveDialog() {
+    return showDialog(context: context, builder: (context) => AreYouSureDialog(
+      title: 'Are you sure?',
+      content: RichText(
+        text: TextSpan(
+          children: [
+            const TextSpan(text: 'Are you sure you want to remove this user?'),
+            const TextSpan(text: '\n\n'),
+            TextSpan(text: 'This will remove all payments and debts from this user.\n', style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).errorColor)),
+          ]
+        ),
+      ),
+      onYes: _removeUser
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Selector<UserProvider, User?>(
-      selector: (context, provider) => provider.getUser(widget.userId),
-      builder: (context, user, _) {
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(user == null ? 'invalid user' : user.name),
-            actions: [
-              PopupMenuButton(
-                enabled: user != null,
-                onSelected: (_Menu item) {
-                  switch (item) {
-                    case _Menu.edit:
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => UserCreatePage(editedUserId: widget.userId)));
-                      break;
-                    case _Menu.remove:
-                      break;
-                  }
-                },
-                itemBuilder: (context) => <PopupMenuEntry<_Menu>>[
-                  PopupMenuItem(
-                    value: _Menu.edit,
-                    child: Row(
-                      children: const [
-                        Icon(Icons.edit),
-                        SizedBox(width: 8),
-                        Text('Edit')
+    return WillPopScope(
+      onWillPop: () async {
+        if (!_removing) Navigator.pop(context);
+
+        return false;
+      },
+      child: Selector<UserProvider, User?>(
+        selector: (context, provider) => provider.getUser(widget.userId),
+        builder: (context, user, _) {
+          return Scaffold(
+            appBar: AppBar(
+              title: Text(user == null ? 'invalid user' : user.name),
+              actions: [
+                PopupMenuButton(
+                  enabled: (!_removing && user != null),
+                  onSelected: (_Menu item) {
+                    switch (item) {
+                      case _Menu.edit:
+                        Navigator.push(context, MaterialPageRoute(builder: (context) => UserCreatePage(editedUserId: widget.userId)));
+                        break;
+                      case _Menu.remove:
+                      _openRemoveDialog();
+                        break;
+                    }
+                  },
+                  itemBuilder: (context) => <PopupMenuEntry<_Menu>>[
+                    PopupMenuItem(
+                      value: _Menu.edit,
+                      child: Row(
+                        children: const [
+                          Icon(Icons.edit),
+                          SizedBox(width: 8),
+                          Text('Edit')
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: _Menu.remove,
+                      child: Row(
+                        children: const [
+                          Icon(Icons.delete),
+                          SizedBox(width: 8),
+                          Text('Remove')
+                        ],
+                      ),
+                    )
+                  ],
+                )
+              ],
+            ),
+            body: user == null
+            ? Text('Error: no user with id ${widget.userId}', style: TextStyle(color: Theme.of(context).errorColor))
+            : SingleChildScrollView(
+              child: Container(
+                margin: const EdgeInsets.all(12),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    UserAvatar(user: user, radius: 56),
+                    Text(user.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 32)),
+                    Selector2<DebtProvider, PaymentProvider, int>(
+                      selector: (context, debtProvider, paymentProvider) => paymentProvider.getUserPaymentsTotal(widget.userId)-debtProvider.getUserTotalOwedAmount(widget.userId),
+                      builder: (context, bal, _) => Consumer<SettingsProvider>(
+                        builder: (context, value, _) => Text('${(bal/100).toStringAsFixed(2)} ${value.currency}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 30, color: (bal >= 0 ? Colors.green : Colors.red)))
+                      ),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        ElevatedButton(onPressed: onAddDebtClick, child: const Text('Add debt')),
+                        const SizedBox(width: 12),
+                        ElevatedButton(onPressed: onAddPaymentClick, child: const Text('Register payment')),
                       ],
                     ),
-                  ),
-                  PopupMenuItem(
-                    enabled: false,
-                    value: _Menu.remove,
-                    child: Row(
-                      children: const [
-                        Icon(Icons.delete),
-                        SizedBox(width: 8),
-                        Text('Remove')
-                      ],
-                    ),
-                  )
-                ],
-              )
-            ],
-          ),
-          body: user == null
-          ? Text('Error: no user with id ${widget.userId}', style: TextStyle(color: Theme.of(context).errorColor))
-          : SingleChildScrollView(
-            child: Container(
-              margin: const EdgeInsets.all(12),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  UserAvatar(user: user, radius: 56),
-                  Text(user.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 32)),
-                  Selector2<DebtProvider, PaymentProvider, int>(
-                    selector: (context, debtProvider, paymentProvider) => paymentProvider.getUserPaymentsTotal(widget.userId)-debtProvider.getUserTotalOwedAmount(widget.userId),
-                    builder: (context, bal, _) => Consumer<SettingsProvider>(
-                      builder: (context, value, _) => Text('${(bal/100).toStringAsFixed(2)} ${value.currency}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 30, color: (bal >= 0 ? Colors.green : Colors.red)))
-                    ),
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      ElevatedButton(onPressed: onAddDebtClick, child: const Text('Add debt')),
-                      const SizedBox(width: 12),
-                      ElevatedButton(onPressed: onAddPaymentClick, child: const Text('Register payment')),
-                    ],
-                  ),
-                  const Divider(color: Colors.black),
-                  const Text('History', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  const SizedBox(height: 8),
-                  Selector2<PaymentProvider, DebtProvider, List<HistoryListItem>>(
-                    selector: (context, paymentProvider, debtProvider) {
-                      var payments = paymentProvider.getUserPaymentsIdsWithDates(widget.userId);
-                      var debts = debtProvider.getUserDebtsIdsWithDates(widget.userId);
-                      return [...payments, ...debts];
-                    },
-                    builder: (context, items, _) => buildHistory(items),
-                  )
-                ],
+                    const Divider(color: Colors.black),
+                    const Text('History', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    const SizedBox(height: 8),
+                    Selector2<PaymentProvider, DebtProvider, List<HistoryListItem>>(
+                      selector: (context, paymentProvider, debtProvider) {
+                        var payments = paymentProvider.getUserPaymentsIdsWithDates(widget.userId);
+                        var debts = debtProvider.getUserDebtsIdsWithDates(widget.userId);
+                        return [...payments, ...debts];
+                      },
+                      builder: (context, items, _) => buildHistory(items),
+                    )
+                  ],
+                ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }

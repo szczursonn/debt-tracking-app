@@ -177,6 +177,7 @@ class _DebtCreatePageState extends State<DebtCreatePage> {
           _titleTextController.text = debt.title;
           if (debt.description != null) _descriptionTextController.text = debt.description!;
           _amountTextController.text = Utils.sumDebtors(debtors).toStringAsFixed(2);
+          _date = debt.date;
           _dateTextController.text = Utils.formatDate(debt.date);
           _userIds = debtors.map((e) => e.userId).toList();
           setupUserTextControllers();
