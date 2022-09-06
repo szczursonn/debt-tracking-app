@@ -29,10 +29,13 @@ class _DebtsPageState extends State<DebtsPage> {
   Widget buildDebtList(List<HistoryListItem> items) {
     List<List<HistoryListItem>> groups = [];
 
+    var sortedItems = [...items];
+    sortedItems.sort((a, b) => a.date.compareTo(b.date));
+
     DateTime? prevDate;
     int index = -1;
 
-    for (var item in items) {
+    for (var item in sortedItems) {
       if (prevDate != null && item.date.day == prevDate.day && item.date.month == prevDate.month && item.date.year == prevDate.year) {
         groups[index].add(item);
       } else {
