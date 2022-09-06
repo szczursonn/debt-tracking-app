@@ -21,7 +21,7 @@ class Utils {
 
     String day = dt.day.toString();
 
-    String month = _months[dt.month];
+    String month = _months[dt.month-1];
 
     String year = dt.year.toString();
 
