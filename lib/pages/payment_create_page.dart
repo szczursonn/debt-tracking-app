@@ -35,7 +35,7 @@ class _PaymentCreatePageState extends State<PaymentCreatePage> {
       if (widget.editedPaymentId == null) {
         await provider.createPayment(
           userId: widget.userId, 
-          amount: double.parse(_amountTextController.text).round()*100,
+          amount: (double.parse(_amountTextController.text)*100).round(),
           date: _date, 
           description: description
         );
@@ -43,7 +43,7 @@ class _PaymentCreatePageState extends State<PaymentCreatePage> {
         await provider.updatePayment(Payment(
           id: widget.editedPaymentId!,
           userId: widget.userId,
-          amount: double.parse(_amountTextController.text).round()*100,
+          amount: (double.parse(_amountTextController.text)*100).round(),
           date: _date, 
           description: description
         ));
