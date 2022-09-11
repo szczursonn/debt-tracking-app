@@ -1,16 +1,26 @@
 # debt_tracking_app
-
-A new Flutter project.
-
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+A flutter app for tracking your friends debts for Android and iOS.  
+Uses [sqflite](https://pub.dev/packages/sqflite) and [shared_preferences](https://pub.dev/packages/shared_preferences) for storage and [provider](https://pub.dev/packages/provider) for state management.  
+![entering app and adding a payment](docs/demo1.gif)
+![changing app style](docs/demo2.gif)
+## ⚠ Disclaimer
+Not tested on iOS cuz i don't have an iphone
+## Features
+- Record debts to easily know how much your friends owe you
+- Choose multiple people for one debt, useful for scenarios like splitting the cost of a pizza
+- Record payments
+- View a person's financial history with you
+- Customize app style and currency
+## Installation
+1. Clone this repository  
+`git clone https://github.com/szczursonn/debt-tracking-app`  
+`cd debt-tracking-app`  
+2. Install dependencies  
+`flutter pub get`
+3. Run  
+`flutter run`  
+## To be added
+- Variable decimal point in currency + more currencies
+- App Language selection
+- Additional way to backup database (in addition to Android Auto Backup and iOS equivalent)
+- Store user avatars as files instead of blobs in sqlite
